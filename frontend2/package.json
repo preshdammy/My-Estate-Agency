@@ -10,6 +10,9 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@emotion/react": "^11.14.0",
+    "@emotion/styled": "^11.14.1",
+    "@mui/icons-material": "^7.3.8",
     "@mui/lab": "^7.0.1-beta.21",
     "@mui/x-data-grid": "^8.27.0",
     "@reduxjs/toolkit": "^2.11.2",
@@ -18,10 +21,11 @@
     "formik": "^2.4.9",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
-    "react-dropzone": "^14.4.0",
+    "react-dropzone": "^14.4.1",
     "react-hook-form": "^7.71.1",
     "react-redux": "^9.2.0",
     "react-router-dom": "^7.13.0",
+    "react-toastify": "^11.0.5",
     "yup": "^1.7.1"
   },
   "devDependencies": {

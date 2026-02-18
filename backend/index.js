@@ -58,6 +58,60 @@ app.use("/public", express.static(path.join(__dirname, "public")));
 // //   });
 // // });
 
+// Add this near the top of your routes
+app.get("/", (req, res) => {
+  res.json({ 
+    message: "Real Estate Agency API is running...",
+    version: "1.0.0",
+    endpoints: {
+      users: "/api/users",
+      agents: "/api/agents",
+      admin: "/api/admin",
+      apartments: "/api/apartments",
+      inspections: "/api/inspections"
+    }
+  });
+});
+
+app.get("/api", (req, res) => {
+  res.json({
+    message: "Real Estate Agency API",
+    version: "1.0.0",
+    status: "online",
+    timestamp: new Date().toISOString(),
+    endpoints: {
+      users: {
+        register: "POST /api/users/register",
+        login: "POST /api/users/login",
+        profile: "GET /api/users/profile (protected)"
+      },
+      agents: {
+        register: "POST /api/agents/register",
+        login: "POST /api/agents/login",
+        profile: "GET /api/agents/profile (protected)",
+        approve: "PUT /api/agents/approve/:id (admin)",
+        reject: "PUT /api/agents/reject/:id (admin)"
+      },
+      admin: {
+        login: "POST /api/admin/login",
+        agents: "GET /api/admin/agents",
+        pendingAgents: "GET /api/admin/agents/pending"
+      },
+      apartments: {
+        create: "POST /api/apartments/create (agent)",
+        myListings: "GET /api/apartments/my-listings (agent)",
+        update: "PUT /api/apartments/update/:id (agent)",
+        delete: "DELETE /api/apartments/:id (agent)"
+      },
+      inspections: {
+        request: "POST /api/inspections/request (user)",
+        agent: "GET /api/inspections/agent (agent)",
+        update: "PUT /api/inspections/:id (agent)"
+      }
+    }
+  });
+});
+
 // API Routes
 app.use("/api/users", userRoutes);
 app.use("/api/agents", agentRoutes);
