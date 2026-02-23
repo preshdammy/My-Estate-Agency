@@ -17,6 +17,7 @@ import {
   ListItemText,
   ListItemIcon,
   Chip,
+  CircularProgress,
 } from '@mui/material';
 import {
   Home as HomeIcon,
@@ -24,71 +25,82 @@ import {
   Report as ReportIcon,
   Person as PersonIcon,
   Visibility as ViewIcon,
+  Bookmark as BookmarkIcon,
 } from '@mui/icons-material';
+import api from '../../../services/api/apiClient';
 
 const UserDashboard = () => {
   const { user } = useSelector((state) => state.auth);
+  const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState({
     totalBookings: 0,
     pendingInspections: 0,
     approvedInspections: 0,
     totalReports: 0,
   });
+  const [recentBookings, setRecentBookings] = useState([]);
+  const [recentInspections, setRecentInspections] = useState([]);
 
-  const [recentBookings, setRecentBookings] = useState([
-    // Mock data - replace with API call
-    {
-      id: 1,
-      property: 'Luxury Apartment in Lekki',
-      date: '2024-03-15',
-      status: 'pending',
-    },
-    {
-      id: 2,
-      property: '3-Bedroom Duplex',
-      date: '2024-03-10',
-      status: 'approved',
-    },
-  ]);
-
-  // Mock data for stats - replace with API call
   useEffect(() => {
-    // Fetch user stats from API
-    setStats({
-      totalBookings: 5,
-      pendingInspections: 2,
-      approvedInspections: 3,
-      totalReports: 1,
-    });
+    fetchUserData();
   }, []);
+
+  const fetchUserData = async () => {
+    setLoading(true);
+    try {
+      // Fetch user's bookings
+      const bookingsRes = await api.get('/users/bookings');
+      setRecentBookings(bookingsRes.data.slice(0, 3));
+      
+      // Fetch user's inspection requests
+      const inspectionsRes = await api.get('/users/inspections');
+      setRecentInspections(inspectionsRes.data.slice(0, 3));
+      
+      // Calculate stats
+      setStats({
+        totalBookings: bookingsRes.data.length,
+        pendingInspections: inspectionsRes.data.filter(i => i.status === 'pending').length,
+        approvedInspections: inspectionsRes.data.filter(i => i.status === 'approved').length,
+        totalReports: 0, // You'll fetch this later
+      });
+    } catch (error) {
+      console.error('Error fetching user data:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const getStatusColor = (status) => {
     switch (status) {
-      case 'approved':
-        return 'success';
-      case 'pending':
-        return 'warning';
-      case 'rejected':
-        return 'error';
-      default:
-        return 'default';
+      case 'approved': return 'success';
+      case 'pending': return 'warning';
+      case 'rejected': return 'error';
+      default: return 'default';
     }
   };
+
+  if (loading) {
+    return (
+      <Box sx={{ display: 'flex', justifyContent: 'center', mt: 8 }}>
+        <CircularProgress />
+      </Box>
+    );
+  }
 
   return (
     <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
       {/* Welcome Section */}
-      <Paper sx={{ p: 3, mb: 3 }}>
+      <Paper sx={{ p: 3, mb: 3, background: 'linear-gradient(135deg, #1976d2 0%, #64b5f6 100%)', color: 'white' }}>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-          <Avatar sx={{ width: 60, height: 60, bgcolor: 'primary.main' }}>
+          <Avatar sx={{ width: 70, height: 70, bgcolor: 'white', color: '#1976d2' }}>
             {user?.name?.charAt(0) || 'U'}
           </Avatar>
           <Box>
             <Typography variant="h4" gutterBottom>
-              Welcome back, {user?.name || 'User'}! 👋
+              Welcome back, {user?.name?.split(' ')[0] || 'User'}! 👋
             </Typography>
-            <Typography variant="body1" color="text.secondary">
-              Manage your property searches, inspections, and bookings from your dashboard.
+            <Typography variant="body1">
+              Find your dream home, manage bookings, and track inspections from your dashboard.
             </Typography>
           </Box>
         </Box>
@@ -108,7 +120,7 @@ const UserDashboard = () => {
                     {stats.totalBookings}
                   </Typography>
                 </Box>
-                <Avatar sx={{ bgcolor: 'primary.main', width: 50, height: 50 }}>
+                <Avatar sx={{ bgcolor: '#1976d2', width: 50, height: 50 }}>
                   <HomeIcon />
                 </Avatar>
               </Box>
@@ -128,7 +140,7 @@ const UserDashboard = () => {
                     {stats.pendingInspections}
                   </Typography>
                 </Box>
-                <Avatar sx={{ bgcolor: 'warning.main', width: 50, height: 50 }}>
+                <Avatar sx={{ bgcolor: '#ed6c02', width: 50, height: 50 }}>
                   <CalendarIcon />
                 </Avatar>
               </Box>
@@ -148,7 +160,7 @@ const UserDashboard = () => {
                     {stats.approvedInspections}
                   </Typography>
                 </Box>
-                <Avatar sx={{ bgcolor: 'success.main', width: 50, height: 50 }}>
+                <Avatar sx={{ bgcolor: '#2e7d32', width: 50, height: 50 }}>
                   <ViewIcon />
                 </Avatar>
               </Box>
@@ -162,14 +174,14 @@ const UserDashboard = () => {
               <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                 <Box>
                   <Typography color="text.secondary" gutterBottom>
-                    Total Reports
+                    Saved Properties
                   </Typography>
                   <Typography variant="h4">
-                    {stats.totalReports}
+                    3
                   </Typography>
                 </Box>
-                <Avatar sx={{ bgcolor: 'error.main', width: 50, height: 50 }}>
-                  <ReportIcon />
+                <Avatar sx={{ bgcolor: '#9c27b0', width: 50, height: 50 }}>
+                  <BookmarkIcon />
                 </Avatar>
               </Box>
             </CardContent>
@@ -180,43 +192,58 @@ const UserDashboard = () => {
       {/* Main Content */}
       <Grid container spacing={3}>
         {/* Recent Bookings */}
-        <Grid item xs={12} md={8}>
+        <Grid item xs={12} md={6}>
           <Paper sx={{ p: 3 }}>
             <Typography variant="h6" gutterBottom>
               Recent Bookings
             </Typography>
-            <List>
-              {recentBookings.map((booking) => (
-                <React.Fragment key={booking.id}>
-                  <ListItem>
-                    <ListItemIcon>
-                      <HomeIcon />
-                    </ListItemIcon>
-                    <ListItemText
-                      primary={booking.property}
-                      secondary={`Booked on: ${booking.date}`}
-                    />
-                    <Chip 
-                      label={booking.status}
-                      color={getStatusColor(booking.status)}
-                      size="small"
-                      sx={{ mr: 2 }}
-                    />
-                    <Button 
-                      size="small" 
-                      component={Link} 
-                      to={`/user/bookings/${booking.id}`}
-                    >
-                      View
-                    </Button>
-                  </ListItem>
-                  <Divider />
-                </React.Fragment>
-              ))}
-            </List>
+            {recentBookings.length === 0 ? (
+              <Box sx={{ textAlign: 'center', py: 3 }}>
+                <Typography color="text.secondary">
+                  No bookings yet
+                </Typography>
+                <Button 
+                  component={Link} 
+                  to="/properties"
+                  variant="outlined" 
+                  sx={{ mt: 2 }}
+                >
+                  Browse Properties
+                </Button>
+              </Box>
+            ) : (
+              <List>
+                {recentBookings.map((booking) => (
+                  <React.Fragment key={booking._id}>
+                    <ListItem>
+                      <ListItemIcon>
+                        <HomeIcon />
+                      </ListItemIcon>
+                      <ListItemText
+                        primary={booking.apartment?.location || 'Property'}
+                        secondary={`Booked on: ${new Date(booking.createdAt).toLocaleDateString()}`}
+                      />
+                      <Chip 
+                        label={booking.status}
+                        color={getStatusColor(booking.status)}
+                        size="small"
+                        sx={{ mr: 2 }}
+                      />
+                      <Button 
+                        size="small" 
+                        component={Link} 
+                        to={`/user/bookings/${booking._id}`}
+                      >
+                        View
+                      </Button>
+                    </ListItem>
+                    <Divider />
+                  </React.Fragment>
+                ))}
+              </List>
+            )}
             <Box sx={{ mt: 2, textAlign: 'center' }}>
               <Button 
-                variant="outlined" 
                 component={Link} 
                 to="/user/bookings"
               >
@@ -226,76 +253,124 @@ const UserDashboard = () => {
           </Paper>
         </Grid>
 
+        {/* Recent Inspections */}
+        <Grid item xs={12} md={6}>
+          <Paper sx={{ p: 3 }}>
+            <Typography variant="h6" gutterBottom>
+              Inspection Requests
+            </Typography>
+            {recentInspections.length === 0 ? (
+              <Box sx={{ textAlign: 'center', py: 3 }}>
+                <Typography color="text.secondary">
+                  No inspection requests yet
+                </Typography>
+                <Button 
+                  component={Link} 
+                  to="/properties"
+                  variant="outlined" 
+                  sx={{ mt: 2 }}
+                >
+                  Request Inspection
+                </Button>
+              </Box>
+            ) : (
+              <List>
+                {recentInspections.map((inspection) => (
+                  <React.Fragment key={inspection._id}>
+                    <ListItem>
+                      <ListItemIcon>
+                        <CalendarIcon />
+                      </ListItemIcon>
+                      <ListItemText
+                        primary={inspection.apartment?.location || 'Property'}
+                        secondary={`Date: ${new Date(inspection.date).toLocaleDateString()}`}
+                      />
+                      <Chip 
+                        label={inspection.status}
+                        color={getStatusColor(inspection.status)}
+                        size="small"
+                        sx={{ mr: 2 }}
+                      />
+                      <Button 
+                        size="small" 
+                        component={Link} 
+                        to={`/user/inspections/${inspection._id}`}
+                      >
+                        View
+                      </Button>
+                    </ListItem>
+                    <Divider />
+                  </React.Fragment>
+                ))}
+              </List>
+            )}
+            <Box sx={{ mt: 2, textAlign: 'center' }}>
+              <Button 
+                component={Link} 
+                to="/user/inspections"
+              >
+                View All Inspections
+              </Button>
+            </Box>
+          </Paper>
+        </Grid>
+
         {/* Quick Actions */}
-        <Grid item xs={12} md={4}>
+        <Grid item xs={12}>
           <Paper sx={{ p: 3 }}>
             <Typography variant="h6" gutterBottom>
               Quick Actions
             </Typography>
-            <List>
-              <ListItem button component={Link} to="/properties">
-                <ListItemIcon>
-                  <HomeIcon />
-                </ListItemIcon>
-                <ListItemText primary="Browse Properties" />
-              </ListItem>
-              <ListItem button component={Link} to="/user/bookings">
-                <ListItemIcon>
-                  <CalendarIcon />
-                </ListItemIcon>
-                <ListItemText primary="My Bookings" />
-              </ListItem>
-              <ListItem button component={Link} to="/user/reports/new">
-                <ListItemIcon>
-                  <ReportIcon />
-                </ListItemIcon>
-                <ListItemText primary="Submit Report" />
-              </ListItem>
-              <ListItem button component={Link} to="/user/profile">
-                <ListItemIcon>
-                  <PersonIcon />
-                </ListItemIcon>
-                <ListItemText primary="Edit Profile" />
-              </ListItem>
-            </List>
-          </Paper>
-
-          {/* Profile Summary */}
-          <Paper sx={{ p: 3, mt: 3 }}>
-            <Typography variant="h6" gutterBottom>
-              Profile Summary
-            </Typography>
-            <Box sx={{ mt: 2 }}>
-              <Typography variant="body2" color="text.secondary">
-                Email
-              </Typography>
-              <Typography variant="body1" gutterBottom>
-                {user?.email || 'Not provided'}
-              </Typography>
-              
-              <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-                Phone
-              </Typography>
-              <Typography variant="body1" gutterBottom>
-                {user?.phone || 'Not provided'}
-              </Typography>
-              
-              <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-                Member Since
-              </Typography>
-              <Typography variant="body1">
-                {user?.createdAt ? new Date(user.createdAt).toLocaleDateString() : 'N/A'}
-              </Typography>
-            </Box>
-            <Button 
-              variant="outlined" 
-              fullWidth 
-              sx={{ mt: 2 }}
-              component={Link}
-              to="/user/profile"
-            >
-              Edit Profile
-            </Button>
+            <Grid container spacing={2}>
+              <Grid item xs={12} sm={6} md={3}>
+                <Button
+                  component={Link}
+                  to="/properties"
+                  variant="outlined"
+                  fullWidth
+                  sx={{ py: 2 }}
+                  startIcon={<HomeIcon />}
+                >
+                  Browse Properties
+                </Button>
+              </Grid>
+              <Grid item xs={12} sm={6} md={3}>
+                <Button
+                  component={Link}
+                  to="/user/bookings"
+                  variant="outlined"
+                  fullWidth
+                  sx={{ py: 2 }}
+                  startIcon={<CalendarIcon />}
+                >
+                  My Bookings
+                </Button>
+              </Grid>
+              <Grid item xs={12} sm={6} md={3}>
+                <Button
+                  component={Link}
+                  to="/user/reports/new"
+                  variant="outlined"
+                  fullWidth
+                  sx={{ py: 2 }}
+                  startIcon={<ReportIcon />}
+                >
+                  Submit Report
+                </Button>
+              </Grid>
+              <Grid item xs={12} sm={6} md={3}>
+                <Button
+                  component={Link}
+                  to="/user/profile"
+                  variant="outlined"
+                  fullWidth
+                  sx={{ py: 2 }}
+                  startIcon={<PersonIcon />}
+                >
+                  Edit Profile
+                </Button>
+              </Grid>
+            </Grid>
           </Paper>
         </Grid>
       </Grid>

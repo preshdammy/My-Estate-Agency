@@ -1,4 +1,3 @@
-// Models/reportmodel.js
 const mongoose = require("mongoose");
 
 const reportSchema = new mongoose.Schema(
@@ -13,6 +12,11 @@ const reportSchema = new mongoose.Schema(
       ref: "Apartment", 
       required: true 
     },
+    subject: {                    // ← ADD THIS FIELD
+      type: String,
+      maxlength: 200,
+      default: null
+    },
     message: { 
       type: String, 
       required: true,
@@ -26,11 +30,11 @@ const reportSchema = new mongoose.Schema(
     status: { 
       type: String, 
       enum: ["open", "in_progress", "resolved", "closed", "assigned"],
-      default: "open" 
+      default: "open"               // ← Changed from "in_progress" to "open"
     },
     priority: {
       type: String,
-      enum: ["low", "medium", "high"],
+      enum: ["low", "medium", "high", "urgent"],  // ← Added "urgent"
       default: "medium"
     },
     agentResponse: {

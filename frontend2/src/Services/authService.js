@@ -1,11 +1,10 @@
 import api from './api/apiClient';
 
-export const authService = {
+const authService = {
   // User Login
   login: async (email, password, role) => {
     let endpoint = '';
     
-    // Determine endpoint based on role
     switch (role) {
       case 'admin':
         endpoint = '/admin/login';
@@ -32,27 +31,39 @@ export const authService = {
     return response.data;
   },
 
-  // Agent Registration (with file upload)
-  registerAgent: async (agentData) => {
-    // Create FormData for file upload
-    const formData = new FormData();
-    formData.append('name', agentData.get('name'));
-    formData.append('email', agentData.get('email'));
-    formData.append('password', agentData.get('password'));
-    formData.append('phone', agentData.get('phone'));
-    formData.append('certificate', agentData.get('certificate'));
+  // Agent Registration with file upload
+  registerAgent: async (formData) => {
+    try {
+      const response = await api.post('/agents/register', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+        timeout: 30000,
+      });
+      return response.data;
+    } catch (error) {
+      console.error('Agent registration error:', error);
+      throw error;
+    }
+  },
 
-    const response = await api.post('/agents/register', formData, {
+  // Get Profile
+  getProfile: async () => {
+    const response = await api.get('/users/profile');
+    return response.data;
+  },
+
+  // Test file upload
+  testUpload: async (file, name) => {
+    const formData = new FormData();
+    formData.append('testFile', file);
+    formData.append('name', name);
+    
+    const response = await api.post('/agents/test-upload', formData, {
       headers: {
         'Content-Type': 'multipart/form-data',
       },
     });
-    return response.data;
-  },
-
-  // Get Current User Profile
-  getProfile: async () => {
-    const response = await api.get('/users/profile');
     return response.data;
   },
 
@@ -61,7 +72,7 @@ export const authService = {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
     localStorage.removeItem('role');
-  },
+  }
 };
 
 export default authService;

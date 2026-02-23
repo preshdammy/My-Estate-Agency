@@ -7,10 +7,12 @@ const Agent = require("../Models/agentmodel");
 // =============== USER FUNCTIONS ===============
 
 // User submits a report
+// User submits a report
 const submitReport = async (req, res) => {
   try {
-    const { apartmentId, message, reportType } = req.body;
+    const { apartmentId, type, subject, message, priority } = req.body;
 
+    // Validation - only apartmentId and message are required
     if (!apartmentId || !message) {
       return res.status(400).json({ 
         message: "Apartment ID and message are required" 
@@ -37,13 +39,27 @@ const submitReport = async (req, res) => {
       });
     }
 
+    // Determine priority based on type if not provided
+    let reportPriority = priority || "medium";
+    if (!priority) {
+      if (type === "fraud" || type === "safety") {
+        reportPriority = "high";
+      } else if (type === "agent" || type === "price") {
+        reportPriority = "medium";
+      } else {
+        reportPriority = "low";
+      }
+    }
+
+    // Create the report with all fields
     const report = await Report.create({
       user: req.user._id,
       apartment: apartmentId,
-      message,
-      reportType: reportType || "general",
+      subject: subject || null,           // ← Save subject separately
+      message: message,                    // ← Save message separately
+      reportType: type || "general",
+      priority: reportPriority,
       status: "open",
-      priority: reportType === "fraud" || reportType === "safety" ? "high" : "medium"
     });
 
     // Populate details for response
@@ -51,16 +67,27 @@ const submitReport = async (req, res) => {
       .populate('apartment', 'location price category')
       .populate('user', 'name email');
 
+    console.log('✅ Report created successfully:', {
+      id: report._id,
+      subject: report.subject,
+      type: report.reportType,
+      priority: report.priority
+    });
+
     res.status(201).json({
       message: "Report submitted successfully",
       report: populatedReport
     });
   } catch (error) {
-    console.error("Submit report error:", error);
-    res.status(500).json({ message: "Server error" });
+    console.error("❌ Submit report error:", error);
+    res.status(500).json({ 
+      message: "Server error", 
+      error: error.message 
+    });
   }
 };
 
+// User views their submitted reports
 // User views their submitted reports
 const getUserReports = async (req, res) => {
   try {
@@ -73,13 +100,16 @@ const getUserReports = async (req, res) => {
       .populate('apartment', 'location price category')
       .sort({ createdAt: -1 });
     
+    // Log to verify data
+    console.log(`Found ${reports.length} reports for user ${req.user._id}`);
+    
     res.json(reports);
   } catch (error) {
-    console.error("Get user reports error:", error);
+    console.error("❌ Get user reports error:", error);
     res.status(500).json({ message: "Server error" });
   }
 };
-
+// User gets specific report details
 // User gets specific report details
 const getReportById = async (req, res) => {
   try {
@@ -87,7 +117,8 @@ const getReportById = async (req, res) => {
     
     const report = await Report.findById(reportId)
       .populate('apartment', 'location price category agent')
-      .populate('user', 'name email phone');
+      .populate('user', 'name email phone')
+      .populate('assignedTo', 'name email');
 
     if (!report) {
       return res.status(404).json({ message: "Report not found" });
@@ -102,7 +133,7 @@ const getReportById = async (req, res) => {
 
     res.json(report);
   } catch (error) {
-    console.error("Get report by ID error:", error);
+    console.error("❌ Get report by ID error:", error);
     res.status(500).json({ message: "Server error" });
   }
 };

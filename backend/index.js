@@ -8,7 +8,7 @@ const userRoutes = require("./Routes/userroutes");
 const agentRoutes = require("./Routes/agentRoutes");
 const adminRoutes = require("./Routes/adminRoutes");
 const inspectionRoutes = require("./Routes/inspectionRoutes");
-const apartmentRoutes = require("./Routes/apartmentroutes")
+const apartmentRoutes = require("./Routes/apartmentRoutes")
 const bookingRoutes = require("./Routes/bookingRoutes");
 const reportRoutes = require("./Routes/reportRoutes");
 const paymentRoutes = require("./Routes/paymentRoutes");
@@ -29,34 +29,6 @@ app.use(express.urlencoded({ extended: true }));
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 app.use("/public", express.static(path.join(__dirname, "public")));
 
-// // Health check
-// app.get("/", (req, res) => {
-//   res.json({ 
-//     message: "Real Estate Agency API", 
-//     version: "1.0.0",
-//     status: "online",
-//     timestamp: new Date().toISOString()
-//   });
-// });
-
-// // API Documentation
-// // app.get("/api-docs", (req, res) => {
-// //   res.json({
-// //     endpoints: {
-// //       auth: "/api/users, /api/agents, /api/admin",
-// //       properties: "/api/apartments",
-// //       bookings: "/api/bookings",
-// //       inspections: "/api/inspections",
-// //       reports: "/api/reports",
-// //       payments: "/api/payments",
-// //       reviews: "/api/reviews",
-// //       notifications: "/api/notifications",
-// //       favorites: "/api/favorites",
-// //       analytics: "/api/analytics",
-// //       search: "/api/search"
-// //     }
-// //   });
-// // });
 
 // Add this near the top of your routes
 app.get("/", (req, res) => {

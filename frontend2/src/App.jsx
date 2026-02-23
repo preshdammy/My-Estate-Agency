@@ -12,6 +12,18 @@ import HomePage from './pages/Public/Home/HomePage';
 import AboutPage from './pages/Public/About/AboutPage';
 import ContactPage from './pages/Public/Contact/ContactPage';
 import FAQPage from './pages/Public/FAQ/FAQPage';
+import UserDashboard from './Pages/User/Dashboard/userDashboard';
+import BrowseProperties from './Pages/User/Properties/browseProperties';
+import PropertyDetails from './Pages/User/Properties/PropertyDetails';
+import MyBookings from './Pages/User/Bookings/myBookings';
+import BookingDetails from './Pages/User/Bookings/bookingDetails';
+import MyInspections from './Pages/User/Inspections/requestInspections';
+import SubmitReport from './Pages/User/Reports/submitReports';
+import UserProfile from './Pages/User/Dashboard/userProfile';
+import MyReports from './Pages/User/Reports/myReports';
+import ReportDetails from './Pages/User/Reports/reportDetails';
+import AgentDashboard from './Pages/Agent/Dashboard/agentDashboard';
+import AddProperty from './Pages/Agent/Properties/addProperty';
 
 // Auth Pages
 import LoginPage from './Pages/Auth/Login/LoginPage';
@@ -55,6 +67,8 @@ function App() {
         <Route path="/about" element={<AboutPage />} />
         <Route path="/contact" element={<ContactPage />} />
         <Route path="/faq" element={<FAQPage />} />
+        <Route path="/properties" element={<BrowseProperties />} />
+        <Route path="/properties/:id" element={<PropertyDetails />} />
         
         {/* Auth Routes */}
         <Route path="/login" element={<LoginPage />} />
@@ -63,24 +77,69 @@ function App() {
         <Route path="/register" element={<Navigate to="/register/user" replace />} />
         
         {/* Protected User Routes */}
-        <Route 
+       <Route 
           path="/user/dashboard" 
           element={
             <ProtectedRoute allowedRoles={['user']}>
-              <div>User Dashboard (Coming Soon)</div>
+              <UserDashboard />
             </ProtectedRoute>
           } 
-        />
+        /> 
+
+        <Route path="/user/bookings" element={
+          <ProtectedRoute allowedRoles={['user']}>
+            <MyBookings />
+          </ProtectedRoute>
+        } />
+        
+        <Route path="/user/bookings/:id" element={
+          <ProtectedRoute allowedRoles={['user']}>
+            <BookingDetails />
+          </ProtectedRoute>
+        } />
+        
+        <Route path="/user/inspections" element={
+          <ProtectedRoute allowedRoles={['user']}>
+            <MyInspections />
+          </ProtectedRoute>
+        } />
+
+        <Route path="/user/reports" element={
+          <ProtectedRoute allowedRoles={['user']}>
+            <MyReports />
+          </ProtectedRoute>
+        } />
+        
+        <Route path="/user/reports/new" element={
+          <ProtectedRoute allowedRoles={['user']}>
+            <SubmitReport />
+          </ProtectedRoute>
+        } />
+
+        <Route path="/user/reports/:id" element={
+          <ProtectedRoute allowedRoles={['user']}>
+            <ReportDetails />
+          </ProtectedRoute>
+        } />
+        
+        <Route path="/user/profile" element={
+          <ProtectedRoute allowedRoles={['user']}>
+            <UserProfile />
+          </ProtectedRoute>
+        } /> 
         
         {/* Protected Agent Routes */}
-        <Route 
-          path="/agent/dashboard" 
-          element={
-            <ProtectedRoute allowedRoles={['agent']}>
-              <div>Agent Dashboard (Coming Soon)</div>
-            </ProtectedRoute>
-          } 
-        />
+       <Route path="/agent/dashboard" element={
+        <ProtectedRoute allowedRoles={['agent']}>
+          <AgentDashboard />
+        </ProtectedRoute>
+      } />
+
+      <Route path="/agent/properties/add" element={
+        <ProtectedRoute allowedRoles={['agent']}>
+          <AddProperty />
+        </ProtectedRoute>
+      } />
         
         {/* Protected Admin Routes */}
         <Route 

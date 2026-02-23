@@ -17,7 +17,15 @@ const apartmentSchema = new mongoose.Schema(
     },
     category: {
       type: String,
-      enum: ['Studio', '1-Bedroom', '2-Bedroom', 'Duplex'],
+      enum: [ 'Studio',
+    '1-Bedroom',
+    '2-Bedroom',
+    '3-Bedroom',
+    '4-Bedroom',
+    'Duplex',
+    'Penthouse',
+    'Terrace',
+    'Bungalow',],
       required: true
     },
     description: {

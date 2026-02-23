@@ -70,12 +70,25 @@ const filterApartments = async (req, res) => {
 // =============== AGENT APARTMENT MANAGEMENT ===============
 
 // Get agent's apartments (listings)
+// Get agent's apartments (listings)
 const getAgentApartments = async (req, res) => {
   try {
     const apartments = await Apartment.find({ agent: req.user._id })
       .sort({ createdAt: -1 });
     
-    res.json(apartments);
+    // Transform images to URLs for each apartment
+    const apartmentsWithUrls = apartments.map(apt => {
+      const aptObj = apt.toObject();
+      if (aptObj.images && aptObj.images.length > 0) {
+        aptObj.images = aptObj.images.map(imgPath => {
+          const filename = imgPath.split('\\').pop().split('/').pop();
+          return `http://localhost:5006/uploads/apartments/${filename}`;
+        });
+      }
+      return aptObj;
+    });
+    
+    res.json(apartmentsWithUrls);
   } catch (error) {
     console.error("Get agent apartments error:", error);
     res.status(500).json({ message: "Failed to fetch apartments" });
@@ -83,35 +96,93 @@ const getAgentApartments = async (req, res) => {
 };
 
 // Create new apartment
+// Create a new apartment
+// Create a new apartment
 const createApartment = async (req, res) => {
   try {
-    const { location, price, category, description, images } = req.body;
+    console.log('Request body:', req.body);
+    console.log('Request files:', req.files);
+    
+    const { 
+      location, 
+      price, 
+      category, 
+      description,
+      bedrooms,
+      bathrooms,
+      size,
+      yearBuilt,
+      parking,
+      furnished,
+      petFriendly,
+      amenities,
+      availability
+    } = req.body;
 
+    // Only validate the REQUIRED fields from your model
     if (!location || !price || !category || !description) {
       return res.status(400).json({ 
-        message: "Location, price, category, and description are required" 
+        message: "Location, price, category, and description are required",
+        received: { location, price, category, description }
       });
     }
 
-    const apartment = new Apartment({
+    // Handle image paths if files were uploaded
+    let imagePaths = [];
+    if (req.files && req.files.length > 0) {
+      // Store relative paths
+      imagePaths = req.files.map(file => file.path.replace(/\\/g, '/'));
+    }
+
+    // Parse amenities if sent as JSON string
+    let amenitiesArray = [];
+    if (amenities) {
+      try {
+        amenitiesArray = JSON.parse(amenities);
+      } catch (e) {
+        amenitiesArray = Array.isArray(amenities) ? amenities : [amenities];
+      }
+    }
+
+    const apartment = await Apartment.create({
       agent: req.user._id,
       location,
       price: Number(price),
       category,
       description,
-      images: images || [],
-      availability: true
+      images: imagePaths, // Store relative paths
+      availability: availability === 'true' || availability === true,
+      bedrooms: bedrooms ? Number(bedrooms) : undefined,
+      bathrooms: bathrooms ? Number(bathrooms) : undefined,
+      size: size ? Number(size) : undefined,
+      yearBuilt: yearBuilt ? Number(yearBuilt) : undefined,
+      parking: parking === 'true' || parking === true,
+      furnished: furnished === 'true' || furnished === true,
+      petFriendly: petFriendly === 'true' || petFriendly === true,
+      amenities: amenitiesArray,
     });
 
-    await apartment.save();
-    
-    res.status(201).json({ 
-      message: "Apartment created successfully", 
-      apartment 
+    // Transform images to URLs for response
+    const apartmentObj = apartment.toObject();
+    if (apartmentObj.images && apartmentObj.images.length > 0) {
+      apartmentObj.images = apartmentObj.images.map(imgPath => {
+        // Convert file path to URL
+        const filename = imgPath.split('\\').pop().split('/').pop();
+        return `http://localhost:5006/uploads/apartments/${filename}`;
+      });
+    }
+
+    res.status(201).json({
+      message: "Apartment created successfully",
+      apartment: apartmentObj
     });
+
   } catch (error) {
     console.error("Create apartment error:", error);
-    res.status(500).json({ message: "Server error" });
+    res.status(500).json({ 
+      message: "Server error", 
+      error: error.message 
+    });
   }
 };
 
