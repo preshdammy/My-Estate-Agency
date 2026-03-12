@@ -24,12 +24,21 @@ import MyReports from './Pages/User/Reports/myReports';
 import ReportDetails from './Pages/User/Reports/reportDetails';
 import AgentDashboard from './Pages/Agent/Dashboard/agentDashboard';
 import AddProperty from './Pages/Agent/Properties/addProperty';
+import AgentProperties from './Pages/Agent/Properties/agentProperty';
+import EditProperty from './Pages/Agent/Properties/editProperty';
+import AdminDashboard from './Pages/Admin/Dashboard/adminDashboard';
+import ManageInspections from './Pages/Agent/Inspections/manageInspections';
+import ManageBookings from './Pages/Agent/Bookings/manageBookings';
+import ManageReports from './Pages/Agent/Reports/manageReports';
+import InspectionDetails from './Pages/Agent/Inspections/inspectionDetails';
+
+        // Add this route in your protected agent routes section
+
 
 // Auth Pages
 import LoginPage from './Pages/Auth/Login/LoginPage';
 import UserRegisterPage from './Pages/Auth/Register/userRegisterPage';
 import AgentRegisterPage from './Pages/Auth/Register/agentRegisterPage';
-import TestAPI from './Pages/testApi';
 
 // Protected Route Component
 const ProtectedRoute = ({ children, allowedRoles }) => {
@@ -140,19 +149,52 @@ function App() {
           <AddProperty />
         </ProtectedRoute>
       } />
+
+    
+        <Route path="/agent/properties" element={
+          <ProtectedRoute allowedRoles={['agent']}>
+            <AgentProperties />
+          </ProtectedRoute>
+        } />
+
+        <Route path="/agent/properties/edit/:id" element={
+          <ProtectedRoute allowedRoles={['agent']}>
+            <EditProperty />
+          </ProtectedRoute>
+        } />
+
+        <Route path="/agent/inspections" element={
+          <ProtectedRoute allowedRoles={['agent']}>
+            <ManageInspections />
+          </ProtectedRoute>
+        } />
+
+        <Route path="/agent/inspections/:id" element={
+          <ProtectedRoute allowedRoles={['agent']}>
+            <InspectionDetails />
+          </ProtectedRoute>
+        } />
+
+        <Route path="/agent/bookings" element={
+          <ProtectedRoute allowedRoles={['agent']}>
+            <ManageBookings />
+          </ProtectedRoute>
+        } />
+
+        <Route path="/agent/reports" element={
+          <ProtectedRoute allowedRoles={['agent']}>
+            <ManageReports />
+          </ProtectedRoute>
+        } />
         
         {/* Protected Admin Routes */}
-        <Route 
-          path="/admin/dashboard" 
-          element={
-            <ProtectedRoute allowedRoles={['admin']}>
-              <div>Admin Dashboard (Coming Soon)</div>
-            </ProtectedRoute>
-          } 
-        />
+       <Route path="/admin/dashboard" element={
+          <ProtectedRoute allowedRoles={['admin']}>
+            <AdminDashboard />
+          </ProtectedRoute>
+        } />
 
-        <Route path="/test-api" element={<TestAPI />} />
-        
+               
         {/* 404 */}
         <Route path="*" element={<div>404 - Page Not Found</div>} />
       </Routes>

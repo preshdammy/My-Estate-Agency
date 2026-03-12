@@ -53,6 +53,7 @@ const AddProperty = () => {
   const [errors, setErrors] = useState({});
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
   const [isReviewPage, setIsReviewPage] = useState(false);
+  const [userClickedSubmit, setUserClickedSubmit] = useState(false);
   
   // Form data state
   const [formData, setFormData] = useState({
@@ -238,31 +239,95 @@ const handleNext = () => {
  const handleSubmit = async (e) => {
   e.preventDefault();
   
-  if (activeStep !== steps.length - 1) {
-    console.log('Not on review page, preventing submit');
+  // CRITICAL: Only proceed if user actually clicked the submit button
+  if (!userClickedSubmit) {
+    console.log('⛔ Auto-submit prevented - waiting for user click');
     return;
   }
-
-   console.log('Manual submit triggered on review page');
-
+  
+  console.log('✅ User clicked submit - processing form');
+  
   if (!validateStep()) return;
 
   setSubmitting(true);
   try {
-    // Create FormData for multipart/form-data
     const formDataToSend = new FormData();
     
     // Required fields
-    formDataToSend.append('location', formData.location);
-    formDataToSend.append('price', formData.price);
+    formDataToSend.append('location', formData.location.trim());
+    formDataToSend.append('price', String(formData.price));
     formDataToSend.append('category', formData.category);
-    formDataToSend.append('description', formData.description);
+    formDataToSend.append('description', formData.description.trim());
     formDataToSend.append('availability', formData.availability === 'available');
     
-    // Optional fields from your model
+    // Optional fields
     if (formData.bedrooms) formDataToSend.append('bedrooms', formData.bedrooms);
     if (formData.bathrooms) formDataToSend.append('bathrooms', formData.bathrooms);
-    if (formData.area) formDataToSend.append('size', formData.area); // 'area' in frontend, 'size' in model
+    if (formData.area) formDataToSend.append('size', formData.area);
+    
+    // Features/amenities
+    if (formData.features && formData.features.length > 0) {
+      formDataToSend.append('amenities', JSON.stringify(formData.features));
+    }
+    
+    // Add images
+    images.forEach((image) => {
+      formDataToSend.append('images', image);
+    });
+
+    console.log('Submitting apartment:', Object.fromEntries(formDataToSend));
+    
+    const response = await api.post('/apartments', formDataToSend, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+    
+    console.log('Apartment created:', response.data);
+
+    setSnackbar({
+      open: true,
+      message: 'Property listed successfully!',
+      severity: 'success',
+    });
+
+    setTimeout(() => {
+      navigate('/agent/properties');
+    }, 2000);
+    
+  } catch (err) {
+    console.error('Error creating apartment:', err);
+    setSnackbar({
+      open: true,
+      message: err.response?.data?.message || 'Failed to create property',
+      severity: 'error',
+    });
+  } finally {
+    setSubmitting(false);
+    setUserClickedSubmit(false); // Reset for next time
+  }
+};
+
+const handleManualSubmit = async () => {
+  console.log('🔘 Manual submit button clicked');
+  
+  if (!validateStep()) return;
+
+  setSubmitting(true);
+  try {
+    const formDataToSend = new FormData();
+    
+    // Required fields
+    formDataToSend.append('location', formData.location.trim());
+    formDataToSend.append('price', String(formData.price));
+    formDataToSend.append('category', formData.category);
+    formDataToSend.append('description', formData.description.trim());
+    formDataToSend.append('availability', formData.availability === 'available');
+    
+    // Optional fields
+    if (formData.bedrooms) formDataToSend.append('bedrooms', formData.bedrooms);
+    if (formData.bathrooms) formDataToSend.append('bathrooms', formData.bathrooms);
+    if (formData.area) formDataToSend.append('size', formData.area);
     
     // Features/amenities
     if (formData.features && formData.features.length > 0) {
@@ -773,52 +838,45 @@ const handleNext = () => {
           ))}
         </Stepper>
 
-        {/* Form */}
-      <form  onSubmit={handleSubmit}
-        onKeyPress={(e) => {
-          // Prevent form submission on Enter key except on review page
-          if (e.key === 'Enter' && activeStep !== steps.length - 1) {
-            e.preventDefault();
-          }
-        }}>
-        {/* Form content - steps 0,1,2,3 */}
-        <Box sx={{ minHeight: 400 }}>
-          {getStepContent(activeStep)}
-        </Box>
+        // Remove onSubmit from form
+          <form id="property-form">
+            {/* Form content - steps 0,1,2,3 */}
+            <Box sx={{ minHeight: 400 }}>
+              {getStepContent(activeStep)}
+            </Box>
+          </form>
 
-        {/* Navigation Buttons */}
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 4 }}>
-          <Button
-            disabled={activeStep === 0}
-            onClick={handleBack}
-            variant="outlined"
-            type="button"
-          >
-            Back
-          </Button>
-          
-          {activeStep === steps.length - 1 ? (
+          {/* Navigation Buttons */}
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 4 }}>
             <Button
-              type="submit"
-              variant="contained"
-              color="primary"
-              disabled={submitting}
-              startIcon={submitting ? <CircularProgress size={20} /> : <CheckCircleIcon />}
-              size="large"
+              disabled={activeStep === 0}
+              onClick={handleBack}
+              variant="outlined"
             >
-              {submitting ? 'Submitting...' : 'List Property'}
+              Back
             </Button>
-          ) : (
-            <Button
-              type="button"
-              variant="contained"
-              onClick={handleNext}
-            >
-              Next
-            </Button>
-          )}
-        </Box>
-      </form>
+            
+            {activeStep === steps.length - 1 ? (
+              <Button
+                variant="contained"
+                color="primary"
+                disabled={submitting}
+                onClick={handleManualSubmit}
+                startIcon={submitting ? <CircularProgress size={20} /> : <CheckCircleIcon />}
+                size="large"
+              >
+                {submitting ? 'Submitting...' : 'List Property'}
+              </Button>
+            ) : (
+              <Button
+                variant="contained"
+                onClick={handleNext}
+              >
+                Next
+              </Button>
+            )}
+          </Box>
+
       </Paper>
 
       {/* Snackbar for notifications */}

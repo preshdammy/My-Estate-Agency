@@ -77,10 +77,13 @@ const PropertyDetails = () => {
   const navigate = useNavigate();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
-  const { user, isAuthenticated } = useSelector((state) => state.auth);
+  const { user, token } = useSelector((state) => state.auth);
 
+    const isAuthenticated = !!token;
+    const isUser = user?.role === "user";
   // State
   const [property, setProperty] = useState(null);
+  const [agentCount, setAgentCount] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [tabValue, setTabValue] = useState(0);
@@ -106,88 +109,52 @@ const PropertyDetails = () => {
   // Snackbar
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
 
-  // Mock data for development
-  const mockProperty = {
-    _id: id || '1',
-    location: 'Lekki Phase 1, Lagos',
-    price: 5000000,
-    category: '3-Bedroom',
-    description: `This stunning property offers the perfect blend of luxury and comfort. Located in the heart of Lekki Phase 1, this apartment provides easy access to shopping malls, restaurants, and schools.
-
-    The apartment features spacious living areas with floor-to-ceiling windows that flood the space with natural light. The modern kitchen is equipped with high-end appliances and ample storage space.
-
-    All bedrooms are en-suite with walk-in closets. The master bedroom includes a private balcony overlooking the city skyline. The property also includes a dedicated parking space and 24/7 security.`,
-    images: [
-      'https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?w=800',
-      'https://images.unsplash.com/photo-1512917774080-9991f1c4c750?w=800',
-      'https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?w=800',
-      'https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=800',
-      'https://images.unsplash.com/photo-1513584684374-8bab748fbf90?w=800',
-    ],
-    bedrooms: 3,
-    bathrooms: 4,
-    area: 250,
-    yearBuilt: 2022,
-    furnished: true,
-    agent: {
-      _id: 'agent1',
-      name: 'John Agent',
-      email: 'john.agent@realestate.com',
-      phone: '+234 801 234 5678',
-      avatar: 'https://i.pravatar.cc/150?img=1',
-      rating: 4.5,
-      totalListings: 15,
-      joined: '2022-01-15',
-    },
-    features: [
-      '24/7 Security',
-      'Swimming Pool',
-      'Fully Equipped Gym',
-      'Smart Home System',
-      'High-speed Internet',
-      'Covered Parking',
-      'Central AC',
-      'Modern Kitchen',
-      'Balcony',
-      'Storage Room',
-      'Children Play Area',
-      'Backup Generator',
-    ],
-    nearby: [  // Make sure this array exists
-      { name: 'Shopping Mall', distance: '0.5 km' },
-      { name: 'International School', distance: '1.2 km' },
-      { name: 'Hospital', distance: '2 km' },
-      { name: 'Restaurant', distance: '0.3 km' },
-      { name: 'Bank', distance: '0.8 km' },
-      { name: 'Park', distance: '1.5 km' },
-    ],
-    status: 'available',
-    views: 234,
-    listedDate: '2024-01-15',
-  };
-
   // Fetch property details
   useEffect(() => {
     fetchPropertyDetails();
   }, [id]);
 
-  const fetchPropertyDetails = async () => {
-    setLoading(true);
-    setError(null);
+ const fetchPropertyDetails = async () => {
+  setLoading(true);
+  setError(null);
+
+  try {
     
-    try {
-      // Try to fetch from API
-      const response = await api.get(`/apartments/${id}`);
-      setProperty(response.data);
+    const response = await api.get(`/apartments/${id}`);
+    const apt = response.data;
+
+    console.log("Apartment response:", response.data);
+
+    setProperty(apt);
+
+    // 👇 ADD THIS RIGHT AFTER setProperty
+        if (apt?.agent?._id) {
+      try {
+        console.log("Agent ID:", apt.agent._id);
+
+        const res = await api.get(`/apartments/agent/${apt.agent._id}`);
+
+        console.log("Agent apartments response:", res.data);
+
+        setAgentCount(
+          Array.isArray(res.data.apartments)
+            ? res.data.apartments.length
+            : 0
+        );
+
+      } catch (err) {
+        console.error("Error fetching agent listings:", err);
+        setAgentCount(null);
+      }
+    }
+
     } catch (err) {
       console.error('Error fetching property:', err);
-      // Use mock data if API fails
       setProperty(mockProperty);
     } finally {
       setLoading(false);
     }
   };
-
   const handleTabChange = (event, newValue) => {
     setTabValue(newValue);
   };
@@ -210,47 +177,66 @@ const PropertyDetails = () => {
     });
   };
 
-  const handleRequestInspection = () => {
-    if (!isAuthenticated) {
-      setSnackbar({
-        open: true,
-        message: 'Please login to request an inspection',
-        severity: 'warning',
-      });
-      navigate('/login');
-      return;
-    }
-    setInspectionDialog(true);
-  };
+ const handleRequestInspection = () => {
+  if (!token) {
+    setSnackbar({
+      open: true,
+      message: "Please login to request inspection",
+      severity: "warning",
+    });
+    return;
+  }
+
+  if (user?.role !== "user") {
+    setSnackbar({
+      open: true,
+      message: "Agents cannot request inspections",
+      severity: "error",
+    });
+    return;
+  }
+
+  setInspectionDialog(true);
+ };
 
   const handleSubmitInspection = async () => {
-    if (!inspectionDate || !inspectionTime) {
-      setSnackbar({
-        open: true,
-        message: 'Please select date and time',
-        severity: 'error',
-      });
-      return;
-    }
+  if (!inspectionDate || !inspectionTime) {
+    setSnackbar({
+      open: true,
+      message: "Please select date and time",
+      severity: "error",
+    });
+    return;
+  }
 
+  try {
     setSubmitting(true);
-    
-    // Simulate API call
-    setTimeout(() => {
-      setInspectionDialog(false);
-      setSnackbar({
-        open: true,
-        message: 'Inspection request submitted successfully!',
-        severity: 'success',
-      });
-      setSubmitting(false);
-      
-      // Reset form
-      setInspectionDate('');
-      setInspectionTime('');
-      setInspectionNotes('');
-    }, 1000);
-  };
+
+    await api.post("/inspections/request", {
+      apartmentId: property._id,
+      date: inspectionDate,
+      time: inspectionTime,
+      notes: inspectionNotes,
+    });
+
+    setSnackbar({
+      open: true,
+      message: "Inspection request sent!",
+      severity: "success",
+    });
+
+    setInspectionDialog(false);
+
+  } catch (err) {
+    setSnackbar({
+      open: true,
+      message: "Failed to request inspection",
+      severity: "error",
+    });
+  } finally {
+    setSubmitting(false);
+  }
+};
 
   const handleReportSubmit = () => {
     if (!reportReason) {
@@ -339,6 +325,8 @@ const PropertyDetails = () => {
       </Container>
     );
   }
+
+  const statusLabel = property?.availability ? 'Available' : 'Rented';
 
   return (
     <Container maxWidth="lg" sx={{ py: 4 }}>
@@ -466,16 +454,18 @@ const PropertyDetails = () => {
                     color="primary"
                     variant="outlined"
                   />
+                  
+                  
                   <Chip
-                    label={property.status || 'Available'}
-                    size="small"
-                    color={property.status === 'available' ? 'success' : 'error'}
+                     label={statusLabel}
+                      size="small"
+                      color={property.availability ? 'success' : 'error'}
                   />
                   <Typography variant="body2" color="text.secondary">
-                    Listed: {property.listedDate ? new Date(property.listedDate).toLocaleDateString() : 'N/A'}
+                    Listed: {property.createdAt ? new Date(property.createdAt).toLocaleDateString() : 'N/A'}
                   </Typography>
                   <Typography variant="body2" color="text.secondary">
-                    👁️ {property.views || 0} views
+                    👁️ {property.totalViews || 0} views
                   </Typography>
                 </Box>
               </Box>
@@ -528,13 +518,7 @@ const PropertyDetails = () => {
               <Grid item xs={6} sm={3}>
                 <Box sx={{ textAlign: 'center' }}>
                   <AreaIcon color="primary" sx={{ fontSize: 32 }} />
-                  <Typography variant="body2">{property.area || 0} m²</Typography>
-                </Box>
-              </Grid>
-              <Grid item xs={6} sm={3}>
-                <Box sx={{ textAlign: 'center' }}>
-                  <HomeIcon color="primary" sx={{ fontSize: 32 }} />
-                  <Typography variant="body2">Built {property.yearBuilt || 'N/A'}</Typography>
+                  <Typography variant="body2">{property.size ? `${property.size} m²` : 'N/A'}</Typography>
                 </Box>
               </Grid>
             </Grid>
@@ -556,8 +540,8 @@ const PropertyDetails = () => {
 
             <TabPanel value={tabValue} index={1}>
               <Grid container spacing={2}>
-                {property.features && property.features.length > 0 ? (
-                  property.features.map((feature, index) => (
+                {property.amenities && property.amenities.length > 0 ? (
+                  property.amenities.map((feature, index) => (
                     <Grid item xs={12} sm={6} key={index}>
                       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                         <CheckCircleIcon color="success" fontSize="small" />
@@ -615,8 +599,8 @@ const PropertyDetails = () => {
                   {property.agent.rating && (
                     <Rating value={property.agent.rating} readOnly size="small" />
                   )}
-                  <Typography variant="caption" color="text.secondary">
-                    {property.agent.totalListings || 0} properties
+                 <Typography variant="caption" color="text.secondary">
+                    {agentCount === null ? 'Loading...' : `${agentCount} properties`}
                   </Typography>
                 </Box>
               </Box>
@@ -653,16 +637,16 @@ const PropertyDetails = () => {
 
               <Divider sx={{ my: 2 }} />
 
-              <Button
-                variant="contained"
-                fullWidth
-                size="large"
-                startIcon={<CalendarIcon />}
-                onClick={handleRequestInspection}
-                sx={{ mb: 1 }}
-              >
-                Request Inspection
-              </Button>
+              {isAuthenticated && isUser && (
+                <Button
+                  variant="contained"
+                  fullWidth
+                  startIcon={<CalendarIcon />}
+                  onClick={handleRequestInspection}
+                >
+                  Request Inspection
+                </Button>
+              )}
               
               {property.agent.email && (
                 <Button
@@ -693,12 +677,9 @@ const PropertyDetails = () => {
                 <ListItemText primary="Furnished" secondary={property.furnished ? 'Yes' : 'No'} />
               </ListItem>
               <ListItem>
-                <ListItemText primary="Year Built" secondary={property.yearBuilt || 'N/A'} />
-              </ListItem>
-              <ListItem>
                 <ListItemText
                   primary="Available from"
-                  secondary={property.listedDate ? new Date(property.listedDate).toLocaleDateString() : 'N/A'}
+                  secondary={property.createdAt ? new Date(property.createdAt).toLocaleDateString() : 'N/A'}
                 />
               </ListItem>
             </List>

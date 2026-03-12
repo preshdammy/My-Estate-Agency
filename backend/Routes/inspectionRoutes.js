@@ -34,7 +34,6 @@ router.post("/request", protect, requestInspection);
 router.get("/my-inspections", protect, getUserInspections);
 
 // User gets specific inspection request
-router.get("/:requestId", protect, getInspectionById);
 
 // User cancels inspection request
 router.delete("/:requestId", protect, cancelInspectionRequest);
@@ -63,5 +62,7 @@ router.get("/admin/all", protect, adminProtect, getAllInspections);
 
 // Admin gets inspection statistics
 router.get("/admin/stats", protect, adminProtect, getInspectionStats);
+
+router.get("/:requestId", protect, getInspectionById);
 
 module.exports = router;

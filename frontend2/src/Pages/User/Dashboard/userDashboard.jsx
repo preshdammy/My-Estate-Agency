@@ -53,7 +53,7 @@ const UserDashboard = () => {
       setRecentBookings(bookingsRes.data.slice(0, 3));
       
       // Fetch user's inspection requests
-      const inspectionsRes = await api.get('/users/inspections');
+      const inspectionsRes = await api.get('/inspections/my-inspections');
       setRecentInspections(inspectionsRes.data.slice(0, 3));
       
       // Calculate stats

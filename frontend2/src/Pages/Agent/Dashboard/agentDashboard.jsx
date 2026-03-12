@@ -117,7 +117,7 @@ const AgentDashboard = () => {
           console.error('Error fetching properties:', err);
           return { data: [] };
         }),
-        api.get('/agents/inspections').catch(err => {
+        api.get('/inspections/agent/requests').catch(err => {
           console.error('Error fetching inspections:', err);
           return { data: [] };
         }),
@@ -145,7 +145,9 @@ const AgentDashboard = () => {
 
       // Calculate stats from real data
       const totalProperties = propertiesData.length;
-      const pendingInspections = inspectionsData.filter(i => i.status === 'pending').length;
+      const pendingInspections = inspectionsData.filter(
+          i => i.status === 'pending' || i.status === 'requested'
+        ).length;
       const totalBookings = bookingsData.length;
       const openReports = reportsData.filter(r => r.status === 'open' || r.status === 'pending').length;
       const totalViews = propertiesData.reduce((sum, p) => sum + (p.views || 0), 0);
@@ -189,7 +191,7 @@ const AgentDashboard = () => {
 
   const handleInspectionSubmit = async () => {
     try {
-      await api.put(`/agents/inspections/${selectedInspection._id}/status`, {
+      await api.put(`/inspections/agent/${selectedInspection._id}/status`, {
         status: inspectionAction === 'approve' ? 'approved' : 'rejected'
       });
       
@@ -452,7 +454,11 @@ const AgentDashboard = () => {
                   <Box sx={{ position: 'relative' }}>
                     <Box
                       component="img"
-                      src={property.images?.[0] || 'https://via.placeholder.com/300x200'}
+                      src={
+                        property.images?.[0]
+                          ? `http://localhost:5006/uploads/apartments/${property.images[0]}`
+                          : 'https://via.placeholder.com/300x200'
+                      }
                       alt={property.location}
                       sx={{ height: 200, width: '100%', objectFit: 'cover' }}
                     />
@@ -537,7 +543,7 @@ const AgentDashboard = () => {
               <TableBody>
                 {inspections.map((inspection) => (
                   <TableRow key={inspection._id}>
-                    <TableCell>{inspection.property?.location || 'N/A'}</TableCell>
+                    <TableCell>{inspection.apartment?.location || 'N/A'}</TableCell>
                     <TableCell>
                       <Typography variant="body2">{inspection.user?.name || 'N/A'}</Typography>
                       <Typography variant="caption" color="text.secondary">
@@ -553,9 +559,9 @@ const AgentDashboard = () => {
                       />
                     </TableCell>
                     <TableCell>
-                      <Tooltip title={inspection.notes || 'No notes'}>
+                      <Tooltip title={inspection.message || 'No notes'}>
                         <Typography variant="body2" noWrap sx={{ maxWidth: 150 }}>
-                          {inspection.notes || '—'}
+                          {inspection.message || '—'}
                         </Typography>
                       </Tooltip>
                     </TableCell>
@@ -581,7 +587,7 @@ const AgentDashboard = () => {
                       <IconButton
                         size="small"
                         component={Link}
-                        to={`/agent/inspections/${inspection._id}`}
+                        to={`/agent/inspections`}
                       >
                         <VisibilityIcon />
                       </IconButton>

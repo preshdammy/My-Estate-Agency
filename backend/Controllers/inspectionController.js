@@ -91,6 +91,7 @@ const getUserInspections = async (req, res) => {
       .populate('apartment', 'location price category images')
       .populate('agent', 'name email phone')
       .sort({ date: -1 });
+      
     
     res.json(inspections);
   } catch (error) {
@@ -416,41 +417,95 @@ const getInspectionStats = async (req, res) => {
 // =============== UTILITY FUNCTIONS ===============
 
 // Get inspection by ID
+// const getInspectionById = async (req, res) => {
+//     console.log("CONTROLLER RUNNING");
+    
+//   try {
+//     const { requestId } = req.params;
+
+//     console.log("Request ID:", requestId);
+//     console.log("Logged user:", req.user);
+
+//     const inspectionRequest = await InspectionRequest.findById(requestId)
+//       .populate('user', 'name email phone')
+//       .populate('agent', 'name email phone')
+//       .populate('apartment', 'location price category images')
+
+
+//       console.log("Inspection found:", inspectionRequest);
+
+//     if (!inspectionRequest) {
+//       return res.status(404).json({ message: "Inspection request not found" });
+//     }
+
+
+//     // Check authorization based on role
+//     let isAuthorized = true;
+    
+//     if (req.user.role === "admin") {
+//         isAuthorized = true;
+//       } 
+//       else if (req.user.role === "agent") {
+//         isAuthorized =
+//           inspectionRequest.agent &&
+//           inspectionRequest.agent._id.toString() === req.user._id.toString();
+//       } 
+//       else if (req.user.role === "user") {
+//         isAuthorized =
+//           inspectionRequest.user._id.toString() === req.user._id.toString();
+//       }
+
+//     if (!isAuthorized) {
+//       return res.status(403).json({ 
+//         message: "Not authorized to view this inspection request" 
+//       });
+//     }
+
+//    console.log("User role:", req.user?.role);
+//     console.log("Logged user ID:", req.user?._id);
+//     console.log("Inspection agent:", inspectionRequest.agent?._id);
+//     console.log("Inspection user:", inspectionRequest.user?._id);
+
+//     res.json(inspectionRequest);
+//   } catch (error) {
+//     console.error("Get inspection by ID error:", error);
+//     res.status(500).json({ message: "Server error" });
+//   }
+// };
+
 const getInspectionById = async (req, res) => {
   try {
+
     const { requestId } = req.params;
-    
-    const inspectionRequest = await InspectionRequest.findById(requestId)
-      .populate('user', 'name email phone')
-      .populate('agent', 'name email phone')
-      .populate('apartment', 'location price category images');
 
-    if (!inspectionRequest) {
-      return res.status(404).json({ message: "Inspection request not found" });
+    let filter = { _id: requestId };
+
+    if (req.user.role === "agent") {
+      filter.agent = req.user._id;
     }
 
-    // Check authorization based on role
-    let isAuthorized = false;
-    
-    if (req.user.role === "admin") {
-      isAuthorized = true;
-    } else if (req.user.role === "agent") {
-      const apartment = await Apartment.findById(inspectionRequest.apartment._id);
-      isAuthorized = apartment && apartment.agent.toString() === req.user._id.toString();
-    } else if (req.user.role === "user") {
-      isAuthorized = inspectionRequest.user._id.toString() === req.user._id.toString();
+    if (req.user.role === "user") {
+      filter.user = req.user._id;
     }
 
-    if (!isAuthorized) {
-      return res.status(403).json({ 
-        message: "Not authorized to view this inspection request" 
+    const inspection = await InspectionRequest.findOne(filter)
+      .populate("user", "name email phone")
+      .populate("agent", "name email phone")
+      .populate("apartment", "location price category images");
+
+    if (!inspection) {
+      return res.status(404).json({
+        message: "Inspection not found or unauthorized"
       });
     }
 
-    res.json(inspectionRequest);
+    res.json(inspection);
+
   } catch (error) {
-    console.error("Get inspection by ID error:", error);
+
+    console.error("Get inspection error:", error);
     res.status(500).json({ message: "Server error" });
+
   }
 };
 

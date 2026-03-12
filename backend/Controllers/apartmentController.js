@@ -4,6 +4,7 @@ const Agent = require("../Models/agentmodel");
 
 // =============== PUBLIC ROUTES ===============
 
+
 // Get all available apartments
 const getAllApartments = async (req, res) => {
   try {
@@ -11,24 +12,45 @@ const getAllApartments = async (req, res) => {
       .populate("agent", "name email phone")
       .sort({ createdAt: -1 });
     
-    res.json(apartments);
+    const baseUrl = process.env.BASE_URL || 'http://localhost:5006';
+    
+    const apartmentsWithUrls = apartments.map(apt => {
+      const aptObj = apt.toObject();
+      if (aptObj.images && aptObj.images.length > 0) {
+        aptObj.images = aptObj.images.map(filename => 
+          `${baseUrl}/uploads/apartments/${filename}`
+        );
+      }
+      return aptObj;
+    });
+    
+    res.json(apartmentsWithUrls);
   } catch (error) {
     console.error("Get all apartments error:", error);
     res.status(500).json({ message: "Failed to fetch apartments" });
   }
 };
-
 // Get apartment by ID
 const getApartmentById = async (req, res) => {
   try {
-    const apartment = await Apartment.findById(req.params.id)
-      .populate("agent", "name email phone");
-    
+      const apartment = await Apartment.findById(req.params.id)
+        .populate("agent", "name email phone avatar createdAt");
+
     if (!apartment) {
       return res.status(404).json({ message: "Apartment not found" });
     }
-    
-    res.json(apartment);
+
+    const baseUrl = process.env.BASE_URL || "http://localhost:5006";
+
+    const apartmentObj = apartment.toObject();
+
+    if (apartmentObj.images && apartmentObj.images.length > 0) {
+      apartmentObj.images = apartmentObj.images.map(filename =>
+        `${baseUrl}/uploads/apartments/${filename}`
+      );
+    }
+
+    res.json(apartmentObj);
   } catch (error) {
     console.error("Get apartment by ID error:", error);
     res.status(500).json({ message: "Server error" });
@@ -70,33 +92,42 @@ const filterApartments = async (req, res) => {
 // =============== AGENT APARTMENT MANAGEMENT ===============
 
 // Get agent's apartments (listings)
-// Get agent's apartments (listings)
 const getAgentApartments = async (req, res) => {
   try {
     const apartments = await Apartment.find({ agent: req.user._id })
       .sort({ createdAt: -1 });
     
-    // Transform images to URLs for each apartment
+    // Base URL for images
+    const baseUrl = process.env.BASE_URL || 'http://localhost:5006';
+    
+    // Transform images to full URLs for each apartment
     const apartmentsWithUrls = apartments.map(apt => {
       const aptObj = apt.toObject();
+      
       if (aptObj.images && aptObj.images.length > 0) {
-        aptObj.images = aptObj.images.map(imgPath => {
-          const filename = imgPath.split('\\').pop().split('/').pop();
-          return `http://localhost:5006/uploads/apartments/${filename}`;
+        aptObj.images = aptObj.images.map(filename => {
+          // Construct full URL
+          return `${baseUrl}/uploads/apartments/${filename}`;
         });
       }
+      
       return aptObj;
     });
     
+    console.log('Sending apartments with URLs:', 
+      apartmentsWithUrls.map(a => ({
+        id: a._id,
+        images: a.images
+      }))
+    );
+    
     res.json(apartmentsWithUrls);
+    
   } catch (error) {
     console.error("Get agent apartments error:", error);
     res.status(500).json({ message: "Failed to fetch apartments" });
   }
 };
-
-// Create new apartment
-// Create a new apartment
 // Create a new apartment
 const createApartment = async (req, res) => {
   try {
@@ -128,11 +159,17 @@ const createApartment = async (req, res) => {
     }
 
     // Handle image paths if files were uploaded
-    let imagePaths = [];
-    if (req.files && req.files.length > 0) {
-      // Store relative paths
-      imagePaths = req.files.map(file => file.path.replace(/\\/g, '/'));
-    }
+    // Handle image paths if files were uploaded
+      let imagePaths = [];
+      if (req.files && req.files.length > 0) {
+        // Store ONLY the filename, not the full path
+        imagePaths = req.files.map(file => {
+          // Extract just the filename
+          const filename = file.filename;
+          console.log('Saving filename:', filename);
+          return filename; // Just store the filename, not the full path
+        });
+      }
 
     // Parse amenities if sent as JSON string
     let amenitiesArray = [];
@@ -162,13 +199,15 @@ const createApartment = async (req, res) => {
       amenities: amenitiesArray,
     });
 
-    // Transform images to URLs for response
+    console.log('✅ Apartment created with images:', apartment.images);
+    console.log('Image paths stored:', imagePaths);
+
+    // In your createApartment function, after creating the apartment
     const apartmentObj = apartment.toObject();
     if (apartmentObj.images && apartmentObj.images.length > 0) {
-      apartmentObj.images = apartmentObj.images.map(imgPath => {
-        // Convert file path to URL
-        const filename = imgPath.split('\\').pop().split('/').pop();
-        return `http://localhost:5006/uploads/apartments/${filename}`;
+      const baseUrl = process.env.BASE_URL || 'http://localhost:5006';
+      apartmentObj.images = apartmentObj.images.map(filename => {
+        return `${baseUrl}/uploads/apartments/${filename}`;
       });
     }
 
@@ -195,36 +234,97 @@ const updateApartment = async (req, res) => {
       return res.status(404).json({ message: "Apartment not found" });
     }
 
-    // Check if the agent is the owner
     if (apartment.agent.toString() !== req.user._id.toString()) {
-      return res.status(403).json({ message: "You can only update your own apartments" });
+      return res
+        .status(403)
+        .json({ message: "You can only update your own apartments" });
     }
 
-    // Update allowed fields
-    const allowedUpdates = ['location', 'price', 'category', 'description', 'images', 'availability'];
-    allowedUpdates.forEach(field => {
-      if (req.body[field] !== undefined) {
-        apartment[field] = req.body[field];
+    const {
+      location,
+      price,
+      category,
+      description,
+      availability,
+      bedrooms,
+      bathrooms,
+      size,
+      yearBuilt,
+      parking,
+      furnished,
+      petFriendly,
+      amenities,
+    } = req.body;
+
+    // Update basic fields if provided
+    if (location !== undefined) apartment.location = location;
+    if (category !== undefined) apartment.category = category;
+    if (description !== undefined) apartment.description = description;
+
+    if (price !== undefined) apartment.price = Number(price);
+    if (bedrooms !== undefined) apartment.bedrooms = Number(bedrooms);
+    if (bathrooms !== undefined) apartment.bathrooms = Number(bathrooms);
+    if (size !== undefined) apartment.size = Number(size);
+    if (yearBuilt !== undefined) apartment.yearBuilt = Number(yearBuilt);
+
+    if (availability !== undefined) {
+      apartment.availability = availability === "true" || availability === true;
+    }
+
+    if (parking !== undefined) apartment.parking = parking === "true" || parking === true;
+    if (furnished !== undefined) apartment.furnished = furnished === "true" || furnished === true;
+    if (petFriendly !== undefined) apartment.petFriendly = petFriendly === "true" || petFriendly === true;
+
+    if (amenities !== undefined) {
+      try {
+        apartment.amenities = JSON.parse(amenities);
+      } catch {
+        apartment.amenities = Array.isArray(amenities) ? amenities : [amenities];
       }
-    });
-
-    // Ensure price is a number
-    if (req.body.price !== undefined) {
-      apartment.price = Number(req.body.price);
     }
 
-    await apartment.save();
-    
-    res.json({ 
-      message: "Apartment updated successfully", 
-      apartment 
+    // ✅ Images: keep selected old + add new uploads
+    let keepImages = undefined;
+
+    // keepImages comes as JSON string e.g. ["file1.jpg","file2.jpg"]
+    if (req.body.keepImages !== undefined) {
+      try {
+        keepImages = JSON.parse(req.body.keepImages);
+      } catch {
+        keepImages = Array.isArray(req.body.keepImages)
+          ? req.body.keepImages
+          : [req.body.keepImages];
+      }
+    }
+
+    // Start from keepImages if provided, otherwise start from existing images
+    let finalImages = Array.isArray(keepImages) ? keepImages : (apartment.images || []);
+
+    // Append newly uploaded files
+    if (req.files && req.files.length > 0) {
+      const uploaded = req.files.map((file) => file.filename);
+      finalImages = [...finalImages, ...uploaded];
+    }
+
+    apartment.images = finalImages;
+        await apartment.save();
+
+    // Return full image URLs
+    const baseUrl = process.env.BASE_URL || "http://localhost:5006";
+    const apartmentObj = apartment.toObject();
+    apartmentObj.images = (apartmentObj.images || []).map(
+      (filename) => `${baseUrl}/uploads/apartments/${filename}`
+    );
+
+    res.json({
+      message: "Apartment updated successfully",
+      apartment: apartmentObj,
     });
   } catch (error) {
     console.error("Update apartment error:", error);
     res.status(500).json({ message: "Failed to update apartment" });
   }
 };
-
 // Delete apartment
 const deleteApartment = async (req, res) => {
   try {
@@ -337,8 +437,7 @@ const getApartmentsByAgent = async (req, res) => {
     }
 
     const apartments = await Apartment.find({ 
-      agent: agentId, 
-      availability: true 
+      agent: agentId,  
     })
     .sort({ createdAt: -1 });
     

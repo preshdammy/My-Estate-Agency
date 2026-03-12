@@ -40,7 +40,9 @@ const storage = multer.diskStorage({
   filename: function (req, file, cb) {
     const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
     const ext = path.extname(file.originalname);
-    cb(null, 'apartment-' + uniqueSuffix + ext);
+    const filename = 'apartment-' + uniqueSuffix + ext;
+    console.log('Generated filename:', filename);
+    cb(null, filename); // This will be stored in req.file.filename
   }
 });
 
@@ -73,8 +75,7 @@ router.use((req, res, next) => {
 // Get all available apartments
 router.get("/", getAllApartments);
 
-// Get apartment by ID
-router.get("/:id", getApartmentById);
+router.get("/agent/:agentId", getApartmentsByAgent);
 
 // Filter apartments
 router.get("/search/filter", filterApartments);
@@ -82,13 +83,16 @@ router.get("/search/filter", filterApartments);
 // Search apartments
 router.get("/search/:q", searchApartments);
 
+// Get apartment by ID
+router.get("/:id", getApartmentById);
+
 // Get apartments by agent ID
-router.get("/agent/:agentId", getApartmentsByAgent);
+
 
 // =============== AGENT PROTECTED ROUTES ===============
 
 // Get agent's apartments
-router.get("/agent/listings", protect, agentProtect, getAgentApartments);
+router.get("/agents/apartments", protect, agentProtect, getAgentApartments);
 
 // Create apartment with image upload - IMPORTANT: upload.array() must come before controller
 router.post(
