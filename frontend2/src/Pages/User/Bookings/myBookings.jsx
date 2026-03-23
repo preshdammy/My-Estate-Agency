@@ -47,80 +47,42 @@ const MyBookings = () => {
   const fetchBookings = async () => {
     setLoading(true);
     try {
-      const response = await api.get('/users/bookings');
+      const response = await api.get('bookings/my-bookings');
       setBookings(response.data);
     } catch (err) {
       console.error('Error fetching bookings:', err);
       setError('Failed to load bookings');
       // Mock data for development
-      setBookings(mockBookings);
+      setBookings([]);
     } finally {
       setLoading(false);
     }
   };
 
-  // Mock data
-  const mockBookings = [
-    {
-      _id: '1',
-      property: {
-        _id: 'p1',
-        location: 'Lekki Phase 1, Lagos',
-        price: 5000000,
-        image: 'https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?w=500',
-      },
-      date: '2024-02-15',
-      status: 'confirmed',
-      amount: 5000000,
-    },
-    {
-      _id: '2',
-      property: {
-        _id: 'p2',
-        location: 'Victoria Island, Lagos',
-        price: 7500000,
-        image: 'https://images.unsplash.com/photo-1512917774080-9991f1c4c750?w=500',
-      },
-      date: '2024-02-20',
-      status: 'pending',
-      amount: 7500000,
-    },
-    {
-      _id: '3',
-      property: {
-        _id: 'p3',
-        location: 'Ikeja, Lagos',
-        price: 2500000,
-        image: 'https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?w=500',
-      },
-      date: '2024-01-10',
-      status: 'cancelled',
-      amount: 2500000,
-    },
-  ];
-
   const getStatusColor = (status) => {
-    switch (status) {
-      case 'confirmed': return 'success';
-      case 'pending': return 'warning';
-      case 'cancelled': return 'error';
-      default: return 'default';
-    }
-  };
+  switch (status) {
+    case 'approved': return 'success';
+    case 'pending': return 'warning';
+    case 'rejected': return 'error';
+    case 'cancelled': return 'error';
+    default: return 'default';
+  }
+};
 
   const getStatusIcon = (status) => {
-    switch (status) {
-      case 'confirmed': return <CheckCircleIcon />;
-      case 'pending': return <PendingIcon />;
-      case 'cancelled': return <CancelIcon />;
-      default: return <CalendarIcon />;
-    }
-  };
+  switch (status) {
+    case 'approved': return <CheckCircleIcon />;
+    case 'pending': return <PendingIcon />;
+    case 'rejected': return <CancelIcon />;
+    case 'cancelled': return <CancelIcon />;
+    default: return <CalendarIcon />;
+  }
+};
 
   const filteredBookings = tabValue === 0 
     ? bookings 
     : bookings.filter(b => 
-        tabValue === 1 ? b.status === 'confirmed' :
+        tabValue === 1 ? b.status === 'approved' :
         tabValue === 2 ? b.status === 'pending' :
         b.status === 'cancelled'
       );
@@ -186,7 +148,11 @@ const MyBookings = () => {
                   <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
                     <Box
                       component="img"
-                      src={booking.property.image}
+                      src={
+                          booking.apartment?.images?.length > 0
+                            ? `http://localhost:5006/uploads/apartments/${booking.apartment.images[0]}`
+                            : "https://via.placeholder.com/300"
+                        }
                       sx={{
                         width: 80,
                         height: 80,
@@ -197,13 +163,13 @@ const MyBookings = () => {
                     />
                     <Box sx={{ flex: 1 }}>
                       <Typography variant="subtitle1">
-                        {booking.property.location}
+                        {booking.apartment?.location}
                       </Typography>
                       <Typography variant="body2" color="text.secondary">
-                        {new Date(booking.date).toLocaleDateString()}
+                        {new Date(booking.createdAt).toLocaleDateString()}
                       </Typography>
                       <Typography variant="h6" color="primary">
-                        {formatPrice(booking.amount)}
+                        {formatPrice(booking.apartment?.price || 0)}
                       </Typography>
                     </Box>
                   </Box>
@@ -247,7 +213,11 @@ const MyBookings = () => {
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
                       <Box
                         component="img"
-                        src={booking.property.image}
+                        src={
+                            booking.apartment?.images?.[0]
+                              ? `http://localhost:5006/uploads/apartments/${booking.apartment.images[0]}`
+                              : "https://via.placeholder.com/300"
+                          }
                         sx={{
                           width: 60,
                           height: 60,
@@ -255,13 +225,13 @@ const MyBookings = () => {
                           borderRadius: 1,
                         }}
                       />
-                      <Typography>{booking.property.location}</Typography>
+                      <Typography>{booking.apartment?.location}</Typography>
                     </Box>
                   </TableCell>
                   <TableCell>
-                    {new Date(booking.date).toLocaleDateString()}
+                    {new Date(booking.createdAt).toLocaleDateString()}
                   </TableCell>
-                  <TableCell>{formatPrice(booking.amount)}</TableCell>
+                  <TableCell>{formatPrice(booking.apartment?.price || 0)}</TableCell>
                   <TableCell>
                     <Chip
                       icon={getStatusIcon(booking.status)}

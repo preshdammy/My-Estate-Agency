@@ -37,9 +37,6 @@ const createBooking = async (req, res) => {
       status: "pending"
     });
 
-    // Update apartment availability
-    apartment.availability = false;
-    await apartment.save();
 
     // Populate apartment details in response
     const populatedBooking = await Booking.findById(booking._id)
@@ -192,11 +189,17 @@ const updateBookingStatus = async (req, res) => {
 
     booking.status = status;
     
-    // If rejected or cancelled, make apartment available again
-    if (status === "rejected" || status === "cancelled") {
-      apartment.availability = true;
-      await apartment.save();
-    }
+          // If approved → make apartment unavailable
+      if (status === "approved") {
+        apartment.availability = false;
+        await apartment.save();
+      }
+
+      // If rejected or cancelled → make it available again
+      if (status === "rejected" || status === "cancelled") {
+        apartment.availability = true;
+        await apartment.save();
+      }
     
     await booking.save();
 

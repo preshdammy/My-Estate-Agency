@@ -52,73 +52,51 @@ const BookingDetails = () => {
   const fetchBookingDetails = async () => {
     setLoading(true);
     try {
-      const response = await api.get(`/users/bookings/${id}`);
+      const response = await api.get(`/bookings/${id}`);
+       console.log("API RESPONSE:", response.data);
+        if (!response.data) {
+          throw new Error("No booking found");
+        }
       setBooking(response.data);
     } catch (err) {
       console.error('Error fetching booking:', err);
-      // Mock data for development
-      setBooking(mockBooking);
+      setError('Booking not found');
     } finally {
       setLoading(false);
     }
   };
 
-  // Mock data
-  const mockBooking = {
-    _id: id,
-    property: {
-      _id: 'p1',
-      location: 'Lekki Phase 1, Lagos',
-      price: 5000000,
-      image: 'https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?w=800',
-      category: '3-Bedroom',
-      description: 'Beautiful apartment with sea view and modern amenities.',
-      agent: {
-        name: 'John Agent',
-        phone: '+234 801 234 5678',
-        email: 'john.agent@realestate.com',
-        avatar: 'https://i.pravatar.cc/150?img=1',
-        rating: 4.5,
-      },
-    },
-    bookingDate: '2024-02-15T10:00:00Z',
-    status: 'confirmed',
-    paymentStatus: 'paid',
-    amount: 5000000,
-    paymentMethod: 'Bank Transfer',
-    transactionId: 'TRX123456789',
-    specialRequests: 'Would prefer ground floor if available',
-    createdAt: '2024-02-10T14:30:00Z',
-    updatedAt: '2024-02-11T09:15:00Z',
-  };
+    console.log("BOOKING DATA:", booking);
 
   const steps = ['Booking Requested', 'Payment Processed', 'Booking Confirmed', 'Inspection Scheduled'];
 
   const getStatusStep = (status) => {
     switch (status) {
       case 'pending': return 1;
-      case 'confirmed': return 2;
-      case 'completed': return 3;
+      case 'approved': return 2;
+      case 'rejected': return 3;
       case 'cancelled': return -1;
       default: return 0;
     }
   };
+  //  console.log(booking.apartment.images[0]);
 
   const getStatusColor = (status) => {
     switch (status) {
-      case 'confirmed': return 'success';
+      case 'approved': return 'success';
       case 'pending': return 'warning';
       case 'cancelled': return 'error';
-      case 'completed': return 'info';
+      case 'rejected': return 'error';
       default: return 'default';
     }
   };
 
   const getStatusIcon = (status) => {
     switch (status) {
-      case 'confirmed': return <CheckCircleIcon />;
+      case 'approved': return <CheckCircleIcon />;
       case 'pending': return <PendingIcon />;
       case 'cancelled': return <CancelIcon />;
+      case 'rejected': return <CancelIcon />;
       default: return <CalendarIcon />;
     }
   };
@@ -216,8 +194,12 @@ const BookingDetails = () => {
                 
                 <Box
                   component="img"
-                  src={booking.property.image}
-                  alt={booking.property.location}
+                  src={
+                      booking.apartment?.images?.[0]
+                        ? `http://localhost:5006/uploads/apartments/${booking.apartment.images[0]}`
+                        : "https://via.placeholder.com/300"
+                    }
+                  alt={booking.apartment?.location}
                   sx={{
                     width: '100%',
                     height: 300,
@@ -228,22 +210,32 @@ const BookingDetails = () => {
                 />
 
                 <Typography variant="h5" gutterBottom>
-                  {booking.property.location}
+                  {booking.apartment?.location}
                 </Typography>
                 
                 <Chip
-                  label={booking.property.category}
+                  label={booking.apartment?.category}
                   color="primary"
                   size="small"
                   sx={{ mb: 2 }}
                 />
+                 <Chip
+                    label={
+                      booking.apartment?.availability
+                        ? "Available"
+                        : "Rented"
+                    }
+                    color={booking.apartment?.availability ? "success" : "error"}
+                    size="small"
+                    sx={{ mb: 1 }}
+                  />
 
                 <Typography variant="body1" paragraph>
-                  {booking.property.description}
+                  {booking.apartment?.description}
                 </Typography>
 
                 <Typography variant="h6" color="primary" gutterBottom>
-                  {formatPrice(booking.amount)}
+                  {formatPrice(booking.apartment?.price)}
                   <Typography component="span" variant="body2" color="text.secondary" sx={{ ml: 1 }}>
                     / year
                   </Typography>
@@ -252,7 +244,7 @@ const BookingDetails = () => {
                 <Button
                   variant="outlined"
                   component={Link}
-                  to={`/properties/${booking.property._id}`}
+                  to={`/properties/${booking.apartment?._id}`}
                   sx={{ mt: 2 }}
                 >
                   View Property Details
@@ -272,14 +264,14 @@ const BookingDetails = () => {
                 
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
                   <Avatar
-                    src={booking.property.agent.avatar}
+                    src={booking.apartment?.agent?.avatar}
                     sx={{ width: 50, height: 50 }}
                   />
                   <Box>
                     <Typography variant="subtitle1">
-                      {booking.property.agent.name}
+                      {booking.apartment?.agent?.name}
                     </Typography>
-                    <Rating value={booking.property.agent.rating} readOnly size="small" />
+                    <Rating value={booking.apartment?.agent?.rating} readOnly size="small" />
                   </Box>
                 </Box>
 
@@ -290,7 +282,7 @@ const BookingDetails = () => {
                     </ListItemIcon>
                     <ListItemText
                       primary="Phone"
-                      secondary={booking.property.agent.phone}
+                      secondary={booking.apartment?.agent?.phone}
                     />
                   </ListItem>
                   <ListItem>
@@ -299,7 +291,7 @@ const BookingDetails = () => {
                     </ListItemIcon>
                     <ListItemText
                       primary="Email"
-                      secondary={booking.property.agent.email}
+                      secondary={booking.apartment?.agent?.email}
                     />
                   </ListItem>
                 </List>
@@ -320,7 +312,7 @@ const BookingDetails = () => {
                     </ListItemIcon>
                     <ListItemText
                       primary="Booking Date"
-                      secondary={formatDate(booking.bookingDate)}
+                      secondary={formatDate(booking.createdAt)}
                     />
                   </ListItem>
                   <ListItem>

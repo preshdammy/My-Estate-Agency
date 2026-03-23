@@ -49,7 +49,7 @@ const UserDashboard = () => {
     setLoading(true);
     try {
       // Fetch user's bookings
-      const bookingsRes = await api.get('/users/bookings');
+      const bookingsRes = await api.get('/bookings/my-bookings');
       setRecentBookings(bookingsRes.data.slice(0, 3));
       
       // Fetch user's inspection requests

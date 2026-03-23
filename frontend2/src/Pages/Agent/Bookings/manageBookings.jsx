@@ -62,7 +62,9 @@ const ManageBookings = () => {
 
   const handleUpdateStatus = async (bookingId, status) => {
     try {
-      await api.put(`/agents/bookings/${bookingId}/status`, { status });
+      await api.put(`/bookings/agent/${bookingId}/status`, {
+          status: status
+        });
       fetchBookings();
     } catch (err) {
       console.error('Error updating booking:', err);
@@ -151,7 +153,7 @@ const ManageBookings = () => {
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                       <HomeIcon color="primary" fontSize="small" />
                       <Typography variant="body2">
-                        {booking.property?.location || 'N/A'}
+                        {booking.apartment?.location || 'N/A'}
                       </Typography>
                     </Box>
                   </TableCell>
@@ -168,12 +170,11 @@ const ManageBookings = () => {
                       </Box>
                     </Box>
                   </TableCell>
-                  <TableCell>{formatDate(booking.date)}</TableCell>
+                  <TableCell>{formatDate(booking.createdAt)}</TableCell>
                   <TableCell>
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                      <MoneyIcon fontSize="small" color="primary" />
                       <Typography variant="body2">
-                        {formatPrice(booking.amount)}
+                       {formatPrice(booking.amount || booking.apartment?.price || 0)}
                       </Typography>
                     </Box>
                   </TableCell>
@@ -201,7 +202,7 @@ const ManageBookings = () => {
                             <IconButton
                               size="small"
                               color="success"
-                              onClick={() => handleUpdateStatus(booking._id, 'confirmed')}
+                              onClick={() => handleUpdateStatus(booking._id, 'approved')}
                             >
                               <CheckCircleIcon />
                             </IconButton>

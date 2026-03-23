@@ -29,10 +29,9 @@ import EditProperty from './Pages/Agent/Properties/editProperty';
 import AdminDashboard from './Pages/Admin/Dashboard/adminDashboard';
 import ManageInspections from './Pages/Agent/Inspections/manageInspections';
 import ManageBookings from './Pages/Agent/Bookings/manageBookings';
+import AgentBookingDetails from './Pages/Agent/Bookings/bookingDetails';
 import ManageReports from './Pages/Agent/Reports/manageReports';
 import InspectionDetails from './Pages/Agent/Inspections/inspectionDetails';
-
-        // Add this route in your protected agent routes section
 
 
 // Auth Pages
@@ -178,6 +177,13 @@ function App() {
         <Route path="/agent/bookings" element={
           <ProtectedRoute allowedRoles={['agent']}>
             <ManageBookings />
+          </ProtectedRoute>
+        } />
+
+        // Add this route in your protected agent routes section
+        <Route path="/agent/bookings/:id" element={
+          <ProtectedRoute allowedRoles={['agent']}>
+            <AgentBookingDetails />
           </ProtectedRoute>
         } />
 

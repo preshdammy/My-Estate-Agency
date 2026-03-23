@@ -29,6 +29,7 @@ app.use(express.urlencoded({ extended: true }));
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 app.use("/public", express.static(path.join(__dirname, "public")));
 
+console.log('Serving static files from:', path.join(__dirname, 'uploads'));
 
 // Add this near the top of your routes
 app.get("/", (req, res) => {

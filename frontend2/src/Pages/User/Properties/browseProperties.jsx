@@ -158,87 +158,27 @@ const BrowseProperties = () => {
     }
   };
 
-  // Mock data for development
-  const mockProperties = [
-    {
-      _id: '1',
-      location: 'Lekki Phase 1, Lagos',
-      price: 5000000,
-      category: '3-Bedroom',
-      description: 'Beautiful apartment with sea view and modern amenities. Features include 24/7 security, swimming pool, and gym.',
-      images: ['https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?w=500'],
-      bedrooms: 3,
-      bathrooms: 4,
-      area: 250,
-      agent: { name: 'John Agent', rating: 4.5 },
-      status: 'available',
-    },
-    {
-      _id: '2',
-      location: 'Victoria Island, Lagos',
-      price: 7500000,
-      category: 'Duplex',
-      description: 'Luxury duplex with pool and garden. Perfect for family living with modern finishes.',
-      images: ['https://images.unsplash.com/photo-1512917774080-9991f1c4c750?w=500'],
-      bedrooms: 4,
-      bathrooms: 5,
-      area: 350,
-      agent: { name: 'Jane Agent', rating: 4.8 },
-      status: 'available',
-    },
-    {
-      _id: '3',
-      location: 'Ikeja, Lagos',
-      price: 2500000,
-      category: 'Studio',
-      description: 'Cozy studio apartment perfect for singles or couples. Recently renovated.',
-      images: ['https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?w=500'],
-      bedrooms: 1,
-      bathrooms: 1,
-      area: 45,
-      agent: { name: 'Mike Agent', rating: 4.2 },
-      status: 'available',
-    },
-    {
-      _id: '4',
-      location: 'Surulere, Lagos',
-      price: 3500000,
-      category: '2-Bedroom',
-      description: 'Well maintained flat in quiet neighborhood. Close to schools and markets.',
-      images: ['https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=500'],
-      bedrooms: 2,
-      bathrooms: 2,
-      area: 120,
-      agent: { name: 'Sarah Agent', rating: 4.6 },
-      status: 'available',
-    },
-    {
-      _id: '5',
-      location: 'Ajah, Lagos',
-      price: 4500000,
-      category: '3-Bedroom',
-      description: 'Spacious apartment with modern kitchen and en-suite bathrooms.',
-      images: ['https://images.unsplash.com/photo-1513584684374-8bab748fbf90?w=500'],
-      bedrooms: 3,
-      bathrooms: 3,
-      area: 180,
-      agent: { name: 'Peter Agent', rating: 4.3 },
-      status: 'available',
-    },
-    {
-      _id: '6',
-      location: 'Ibadan, Oyo',
-      price: 1500000,
-      category: '2-Bedroom',
-      description: 'Affordable apartment in developing area. Good for investment.',
-      images: ['https://images.unsplash.com/photo-1484154218962-a197022b5858?w=500'],
-      bedrooms: 2,
-      bathrooms: 2,
-      area: 100,
-      agent: { name: 'Grace Agent', rating: 4.1 },
-      status: 'available',
-    },
-  ];
+    const isUser = user?.role === "user";
+
+      const handleBooking = async (propertyId) => {
+        if (!isAuthenticated) {
+          alert("Please login to book");
+          return;
+        }
+
+        if (!isUser) {
+          alert("Agents cannot make bookings");
+          return;
+        }
+
+        try {
+          await api.post(`/bookings/apartment/${propertyId}`);
+          alert("Booking request sent!");
+        } catch (err) {
+          alert(err.response?.data?.message || "Booking failed");
+        }
+      };
+
 
   const handleFilterChange = (e) => {
     const { name, value } = e.target;
@@ -583,6 +523,17 @@ const BrowseProperties = () => {
                         sx={{ mb: 1 }}
                       />
 
+                       <Chip
+                          label={
+                            property.availability
+                              ? "Available"
+                              : "Rented"
+                          }
+                          color={property.availability ? "success" : "error"}
+                          size="small"
+                          sx={{ mb: 1 , ml: 1}}
+                        />
+
                       {/* Description */}
                       <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
                         {property.description.substring(0, 60)}...
@@ -631,11 +582,24 @@ const BrowseProperties = () => {
                       >
                         View Details
                       </Button>
+
+                      {isAuthenticated && isUser && property?.availability && (
+                        <Button
+                          size="small"
+                          variant="contained"
+                          color="success"
+                          onClick={() => handleBooking(property._id)}
+                          sx={{ ml: 1 }}
+                        >
+                          Book
+                        </Button>
+                      )}
                     </Box>
                   </Card>
                 </Grid>
               ))}
             </Grid>
+
 
             {/* Empty State */}
             {properties.length === 0 && !loading && (

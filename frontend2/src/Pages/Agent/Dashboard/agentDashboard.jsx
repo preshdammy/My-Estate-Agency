@@ -724,8 +724,10 @@ const AgentDashboard = () => {
                         {booking.user?.email || ''}
                       </Typography>
                     </TableCell>
-                    <TableCell>{formatDate(booking.date)}</TableCell>
-                    <TableCell>{formatPrice(booking.amount || 0)}</TableCell>
+                    <TableCell>{formatDate(booking.createdAt)}</TableCell>
+                    <TableCell>
+                      {formatPrice(booking.amount || booking.apartment?.price || 0)}
+                    </TableCell>
                     <TableCell>
                       <Chip
                         label={booking.status}
@@ -737,7 +739,7 @@ const AgentDashboard = () => {
                       <IconButton
                         size="small"
                         component={Link}
-                        to={`/agent/bookings/${booking._id}`}
+                        to={`/agent/bookings`}
                       >
                         <VisibilityIcon />
                       </IconButton>

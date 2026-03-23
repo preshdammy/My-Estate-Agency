@@ -102,6 +102,9 @@ const PropertyDetails = () => {
   const [reportDialog, setReportDialog] = useState(false);
   const [reportReason, setReportReason] = useState('');
   const [reportDetails, setReportDetails] = useState('');
+
+  // Booking Dialog
+  const [bookingDialog, setBookingDialog] = useState(false);
   
   // Share Dialog
   const [shareDialog, setShareDialog] = useState(false);
@@ -271,6 +274,56 @@ const PropertyDetails = () => {
       setShareDialog(true);
     }
   };
+
+    const handleBooking = () => {
+       console.log("HANDLE BOOKING CLICKED"); //
+
+      if (!token) {
+        setSnackbar({
+          open: true,
+          message: "Please login to book this property",
+          severity: "warning",
+        });
+        return;
+      }
+
+      if (user?.role !== "user") {
+        setSnackbar({
+          open: true,
+          message: "Agents cannot make bookings",
+          severity: "error",
+        });
+        return;
+      }
+
+      // 👉 Open confirmation dialog instead
+      setBookingDialog(true);
+    };
+
+    const confirmBooking = async () => {
+      try {
+        await api.post(`/bookings/apartment/${property._id}`);
+
+        setSnackbar({
+          open: true,
+          message: "Booking request sent successfully!",
+          severity: "success",
+        });
+
+        setBookingDialog(false);
+
+      } catch (err) {
+        console.log("BOOKING ERROR:", err.response?.data);
+
+        setSnackbar({
+          open: true,
+          message: err.response?.data?.message || "Booking failed",
+          severity: "error",
+        });
+
+        setBookingDialog(false);
+      }
+    };
 
   const copyToClipboard = () => {
     navigator.clipboard.writeText(window.location.href);
@@ -647,6 +700,19 @@ const PropertyDetails = () => {
                   Request Inspection
                 </Button>
               )}
+
+              {isAuthenticated && isUser && (
+                  <Button
+                    variant="contained"
+                    fullWidth
+                    sx={{ mt: 2 }}
+                    onClick={handleBooking}
+                    disabled={!property?.availability}
+                    color={property?.availability ? "success" : "inherit"}
+                  >
+                    {property?.availability ? "Book Now" : "Not Available"}
+                  </Button>
+                )}
               
               {property.agent.email && (
                 <Button
@@ -889,6 +955,29 @@ const PropertyDetails = () => {
           </Button>
         </DialogActions>
       </Dialog>
+ 
+
+           {/* Booking Confirmation Dialog */}
+        <Dialog open={bookingDialog} onClose={() => setBookingDialog(false)}>
+              <DialogTitle>Confirm Booking</DialogTitle>
+              <DialogContent>
+                <Typography>
+                  Are you sure you want to book this property?
+                </Typography>
+              </DialogContent>
+              <DialogActions>
+                <Button onClick={() => setBookingDialog(false)}>
+                  No
+                </Button>
+                <Button
+                  onClick={confirmBooking}
+                  variant="contained"
+                  color="success"
+                >
+                  Yes, Book
+                </Button>
+              </DialogActions>
+            </Dialog>
 
       {/* Snackbar */}
       <Snackbar

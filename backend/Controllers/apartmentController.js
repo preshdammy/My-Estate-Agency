@@ -8,7 +8,7 @@ const Agent = require("../Models/agentmodel");
 // Get all available apartments
 const getAllApartments = async (req, res) => {
   try {
-    const apartments = await Apartment.find({ availability: true })
+    const apartments = await Apartment.find()
       .populate("agent", "name email phone")
       .sort({ createdAt: -1 });
     
