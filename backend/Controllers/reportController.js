@@ -124,13 +124,20 @@ const getReportById = async (req, res) => {
       return res.status(404).json({ message: "Report not found" });
     }
 
-    // Check if user owns this report or is admin
-    if (report.user._id.toString() !== req.user._id.toString() && req.user.role !== "admin") {
-      return res.status(403).json({ 
-        message: "Not authorized to view this report" 
+    // Allow:
+    // 1. The user who created the report
+    // 2. The agent who owns the apartment
+    // 3. Admin
+
+    const isReportOwner = report.user._id.toString() === req.user._id.toString();
+    const isAdmin = req.user.role === "admin";
+    const isApartmentAgent = report.apartment.agent.toString() === req.user._id.toString();
+
+    if (!isReportOwner && !isAdmin && !isApartmentAgent) {
+      return res.status(403).json({
+        message: "Not authorized to view this report"
       });
     }
-
     res.json(report);
   } catch (error) {
     console.error("❌ Get report by ID error:", error);

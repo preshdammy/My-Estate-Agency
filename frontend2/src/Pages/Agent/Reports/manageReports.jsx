@@ -61,7 +61,7 @@ const ManageReports = () => {
   const fetchReports = async () => {
     setLoading(true);
     try {
-      const response = await api.get('/agents/reports');
+      const response = await api.get('/reports/agent/reports');
       console.log('Reports:', response.data);
       setReports(response.data);
     } catch (err) {
@@ -79,7 +79,7 @@ const ManageReports = () => {
 
   const handleSubmitResponse = async () => {
     try {
-      await api.post(`/agents/reports/${selectedReport._id}/respond`, {
+      await api.post(`/reports/agents/reports/${selectedReport._id}/respond`, {
         response: responseText,
       });
       fetchReports();
@@ -98,7 +98,7 @@ const ManageReports = () => {
 
   const handleUpdateStatus = async () => {
     try {
-      await api.put(`/agents/reports/${selectedReport._id}/status`, {
+      await api.put(`/reports/agents/reports/${selectedReport._id}/status`, {
         status: newStatus,
       });
       fetchReports();
@@ -110,7 +110,7 @@ const ManageReports = () => {
 
   const handleResolve = async (reportId) => {
     try {
-      await api.put(`/agents/reports/${reportId}/resolve`);
+      await api.put(`/reports/agents/reports/${reportId}/resolve`);
       fetchReports();
     } catch (err) {
       console.error('Error resolving report:', err);
@@ -192,7 +192,7 @@ const ManageReports = () => {
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                       <HomeIcon color="primary" fontSize="small" />
                       <Typography variant="body2">
-                        {report.property?.location || 'N/A'}
+                        {report.apartment?.location || 'N/A'}
                       </Typography>
                     </Box>
                   </TableCell>

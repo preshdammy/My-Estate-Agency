@@ -73,7 +73,7 @@ const AgentBookingDetails = () => {
   const fetchBookingDetails = async () => {
     setLoading(true);
     try {
-      const response = await api.get(`/agents/bookings/${id}`);
+      const response = await api.get(`/bookings/${id}`);
       console.log('Booking details:', response.data);
       setBooking(response.data);
     } catch (err) {
@@ -470,7 +470,6 @@ const AgentBookingDetails = () => {
                         <TableCell sx={{ fontWeight: 'bold' }}>Amount</TableCell>
                         <TableCell>
                           <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                            <MoneyIcon fontSize="small" color="primary" />
                             <Typography variant="body2">
                               {formatPrice(booking.amount || booking.apartment?.price || 0)}
                             </Typography>

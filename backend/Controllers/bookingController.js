@@ -22,7 +22,7 @@ const createBooking = async (req, res) => {
     const existingBooking = await Booking.findOne({
       user: req.user._id,
       apartment: apartmentId,
-      status: { $in: ["pending", "approved"] }
+      status: { $in: ["pending", "approved", "confirmed"] }
     });
 
     if (existingBooking) {
@@ -166,47 +166,63 @@ const getAgentBookings = async (req, res) => {
 const updateBookingStatus = async (req, res) => {
   try {
     const { bookingId } = req.params;
-    const { status } = req.body;
+    const { status, notes } = req.body;
 
-    if (!["approved", "rejected", "cancelled"].includes(status)) {
-      return res.status(400).json({ 
-        message: "Invalid status. Must be 'approved', 'rejected', or 'cancelled'" 
+    const allowedStatuses = [
+      "approved",
+      "confirmed",
+      "completed",
+      "rejected",
+      "cancelled",
+    ];
+
+    if (!allowedStatuses.includes(status)) {
+      return res.status(400).json({
+        message: "Invalid booking status",
       });
     }
 
-    const booking = await Booking.findById(bookingId)
-      .populate("apartment");
+    const booking = await Booking.findById(bookingId).populate("apartment");
 
     if (!booking) {
       return res.status(404).json({ message: "Booking not found" });
     }
 
-    // Check if apartment belongs to this agent
     const apartment = await Apartment.findById(booking.apartment._id);
+
     if (!apartment || apartment.agent.toString() !== req.user._id.toString()) {
-      return res.status(403).json({ message: "Not authorized to update this booking" });
+      return res.status(403).json({
+        message: "Not authorized to update this booking",
+      });
     }
 
     booking.status = status;
-    
-          // If approved → make apartment unavailable
-      if (status === "approved") {
-        apartment.availability = false;
-        await apartment.save();
-      }
 
-      // If rejected or cancelled → make it available again
-      if (status === "rejected" || status === "cancelled") {
-        apartment.availability = true;
-        await apartment.save();
-      }
-    
+    if (notes) booking.notes = notes;
+
+    // timeline fields
+    if (status === "approved") booking.approvedAt = new Date();
+    if (status === "confirmed") booking.confirmedAt = new Date();
+    if (status === "completed") booking.completedAt = new Date();
+
+    // property availability control
+    if (status === "approved" || status === "confirmed") {
+      apartment.availability = false;
+      await apartment.save();
+    }
+
+    if (status === "rejected" || status === "cancelled") {
+      apartment.availability = true;
+      await apartment.save();
+    }
+
     await booking.save();
 
     res.json({
       message: `Booking ${status} successfully`,
-      booking
+      booking,
     });
+
   } catch (error) {
     console.error("Update booking status error:", error);
     res.status(500).json({ message: "Server error" });

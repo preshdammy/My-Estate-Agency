@@ -674,7 +674,7 @@ const AgentDashboard = () => {
                       <IconButton
                         size="small"
                         component={Link}
-                        to={`/agent/reports/${report._id}`}
+                        to={`/agent/reports`}
                       >
                         <VisibilityIcon />
                       </IconButton>

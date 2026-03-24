@@ -46,6 +46,9 @@ router.put("/agent/:reportId/respond", protect, agentProtect, respondToReport);
 // Agent marks report as resolved
 router.put("/agent/:reportId/resolve", protect, agentProtect, agentResolveReport);
 
+// Agent gets a single report
+router.get("/agent/:reportId", protect, agentProtect, getReportById);
+
 // =============== ADMIN PROTECTED ROUTES ===============
 
 // Admin gets all reports

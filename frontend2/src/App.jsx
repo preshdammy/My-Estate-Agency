@@ -22,6 +22,7 @@ import SubmitReport from './Pages/User/Reports/submitReports';
 import UserProfile from './Pages/User/Dashboard/userProfile';
 import MyReports from './Pages/User/Reports/myReports';
 import ReportDetails from './Pages/User/Reports/reportDetails';
+import AgentReportDetails from './Pages/Agent/Reports/AgentReportDetails';
 import AgentDashboard from './Pages/Agent/Dashboard/agentDashboard';
 import AddProperty from './Pages/Agent/Properties/addProperty';
 import AgentProperties from './Pages/Agent/Properties/agentProperty';
@@ -190,6 +191,12 @@ function App() {
         <Route path="/agent/reports" element={
           <ProtectedRoute allowedRoles={['agent']}>
             <ManageReports />
+          </ProtectedRoute>
+        } />
+
+        <Route path="/agent/reports/:id" element={
+          <ProtectedRoute allowedRoles={['agent']}>
+            <AgentReportDetails />
           </ProtectedRoute>
         } />
         
