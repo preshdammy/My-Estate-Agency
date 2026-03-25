@@ -1,7 +1,7 @@
 // controllers/bookingController.js
 const Booking = require("../Models/bookingmodel");
 const Apartment = require("../Models/apartmentmodel");
-
+ const { createNotification } = require("../Controllers/notificationController");
 // =============== USER BOOKING FUNCTIONS ===============
 
 // User books an apartment
@@ -211,12 +211,36 @@ const updateBookingStatus = async (req, res) => {
       await apartment.save();
     }
 
+      await createNotification(
+        booking.user,
+        "booking",
+        "Booking Approved",
+        "Your booking request has been approved.",
+        {
+          relatedId: booking._id,
+          relatedModel: "Booking",
+          actionUrl: `/user/bookings/${booking._id}`
+        }
+      );
+
     if (status === "rejected" || status === "cancelled") {
       apartment.availability = true;
       await apartment.save();
     }
 
     await booking.save();
+
+    await createNotification(
+      booking.user,
+      "booking",
+      "Booking Rejected",
+      "Your booking request was rejected by the agent.",
+      {
+        relatedId: booking._id,
+        relatedModel: "Booking",
+        actionUrl: `/user/bookings/${booking._id}`
+      }
+    );
 
     res.json({
       message: `Booking ${status} successfully`,

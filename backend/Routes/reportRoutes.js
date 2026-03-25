@@ -5,6 +5,7 @@ const {
   submitReport,
   getUserReports,
   getReportById,
+  replyToReport,
   
   // Agent functions
   getAgentReports,
@@ -34,6 +35,9 @@ router.get("/my-reports", protect, getUserReports);
 
 // User gets specific report
 router.get("/:reportId", protect, getReportById);
+
+// User replies to a report
+router.post("/:reportId/reply", protect, replyToReport);
 
 // =============== AGENT PROTECTED ROUTES ===============
 

@@ -3,6 +3,7 @@ const Report = require("../Models/reportmodel");
 const Apartment = require("../Models/apartmentmodel");
 const User = require("../Models/usermodel");
 const Agent = require("../Models/agentmodel");
+ const { createNotification } = require("../Controllers/notificationController");
 
 // =============== USER FUNCTIONS ===============
 
@@ -182,7 +183,7 @@ const respondToReport = async (req, res) => {
     }
 
     const report = await Report.findById(reportId)
-      .populate('apartment');
+      .populate("apartment");
 
     if (!report) {
       return res.status(404).json({ message: "Report not found" });
@@ -190,24 +191,125 @@ const respondToReport = async (req, res) => {
 
     // Check if apartment belongs to this agent
     const apartment = await Apartment.findById(report.apartment._id);
+
     if (!apartment || apartment.agent.toString() !== req.user._id.toString()) {
-      return res.status(403).json({ 
-        message: "Not authorized to respond to this report" 
+      return res.status(403).json({
+        message: "Not authorized to respond to this report",
       });
     }
 
+    // 👇 ADD THIS SECTION
+    if (!report.responses) {
+      report.responses = [];
+    }
+
+    report.responses.push({
+      user: req.user.name,
+      message: response,
+      createdAt: new Date(),
+      isAgent: true
+    });
+
+    // optional: keep these for status tracking
     report.agentResponse = response;
     report.respondedAt = new Date();
     report.status = "in_progress";
 
     await report.save();
 
+    await createNotification(
+      report.user,
+      "report",
+      "Agent replied to your report",
+      "An agent has responded to your report.",
+      {
+        relatedId: report._id,
+        relatedModel: "Report",
+        actionUrl: `/user/reports/${report._id}`
+      }
+    );
+
+
     res.json({
       message: "Response submitted successfully",
       report
     });
+
   } catch (error) {
     console.error("Respond to report error:", error);
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
+// User responds to agent's message 
+  const replyToReport = async (req, res) => {
+  try {
+    const { reportId } = req.params;
+    const { message } = req.body;
+
+    if (!message) {
+      return res.status(400).json({ message: "Reply message is required" });
+    }
+
+    const report = await Report.findById(reportId);
+
+    if (!report) {
+      return res.status(404).json({ message: "Report not found" });
+    }
+
+    // make sure the report belongs to the user
+    if (report.user.toString() !== req.user._id.toString()) {
+      return res.status(403).json({
+        message: "Not authorized to reply to this report"
+      });
+    }
+
+    if (!report.responses) {
+      report.responses = [];
+    }
+
+    report.responses.push({
+      user: req.user.name,
+      message: message,
+      createdAt: new Date(),
+      isAgent: false
+    });
+
+    await report.save();
+
+    const apartment = await Apartment.findById(report.apartment);
+
+    await createNotification(
+      apartment.agent,
+      "report",
+      "User replied to a report",
+      "A user has replied to a report conversation.",
+      {
+        relatedId: report._id,
+        relatedModel: "Report",
+        actionUrl: `/agent/reports/${report._id}`
+      }
+    );
+
+    await createNotification(
+        apartment.agent,
+        "report",
+        "User replied to a report",
+        "A user has replied to a report conversation.",
+        {
+          relatedId: report._id,
+          relatedModel: "Report",
+          actionUrl: `/agent/reports/${report._id}`
+        }
+      );
+
+    res.json({
+      message: "Reply sent successfully",
+      report
+    });
+
+  } catch (error) {
+    console.error("User reply error:", error);
     res.status(500).json({ message: "Server error" });
   }
 };
@@ -456,6 +558,7 @@ module.exports = {
   submitReport,
   getUserReports,
   getReportById,
+  replyToReport,
   
   // Agent functions
   getAgentReports,

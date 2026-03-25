@@ -37,13 +37,18 @@ const reportSchema = new mongoose.Schema(
       enum: ["low", "medium", "high", "urgent"],  // ← Added "urgent"
       default: "medium"
     },
-    agentResponse: {
-      type: String,
-      maxlength: 1000
-    },
     respondedAt: {
       type: Date
     },
+
+    responses: [
+      {
+        user: String,
+        message: String,
+        createdAt: Date,
+        isAgent: Boolean
+      }
+    ],
     resolutionNotes: {
       type: String,
       maxlength: 1000

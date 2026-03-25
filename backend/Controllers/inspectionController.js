@@ -3,6 +3,7 @@ const InspectionRequest = require("../Models/inspectionmodel");
 const Apartment = require("../Models/apartmentmodel");
 const User = require("../Models/usermodel");
 const Agent = require("../Models/agentmodel");
+ const { createNotification } = require("../Controllers/notificationController");
 
 // =============== USER FUNCTIONS ===============
 
@@ -258,6 +259,30 @@ const updateInspectionStatus = async (req, res) => {
     }
     
     await inspectionRequest.save();
+
+    await createNotification(
+      inspection.user,
+      "inspection",
+      "Inspection Approved",
+      "Your inspection request has been approved.",
+      {
+        relatedId: inspection._id,
+        relatedModel: "InspectionRequest",
+        actionUrl: `/user/inspections`
+      }
+    );
+
+    await createNotification(
+        inspection.user,
+        "inspection",
+        "Inspection Rejected",
+        "Your inspection request was rejected.",
+        {
+          relatedId: inspection._id,
+          relatedModel: "InspectionRequest",
+          actionUrl: `/user/inspections`
+        }
+      );
 
     res.json({
       message: `Inspection request ${status} successfully`,

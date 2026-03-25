@@ -72,8 +72,6 @@ const ReportDetails = () => {
     } catch (err) {
       console.error('Error fetching report:', err);
       setError(err.response?.data?.message || 'Failed to load report');
-      // Mock data for development
-      setReport(mockReport);
     } finally {
       setLoading(false);
     }
@@ -89,13 +87,11 @@ const ReportDetails = () => {
     if (!response.trim()) return;
     
     setSubmitting(true);
+    
     try {
-      // Check if your backend has this endpoint - based on your routes, it might be:
-      // Option 1: POST /reports/:reportId/respond
-      // Option 2: POST /reports/agent/:reportId/respond (for agents)
-      
-      // Let's try the first option
-      await api.post(`/reports/${id}/respond`, { message: response });
+      await api.post(`/reports/${id}/reply`, {
+        message: response
+      });
       
       setRespondDialog(false);
       setResponse('');
@@ -106,28 +102,7 @@ const ReportDetails = () => {
     } catch (err) {
       console.error('Error responding:', err);
       
-      // For development, just close the dialog and show success message
-      setRespondDialog(false);
-      setResponse('');
-      alert('Response sent (Demo mode)');
-      
-      // Add the response to mock data
-      const newResponse = {
-        _id: Date.now().toString(),
-        user: user?.name || 'You',
-        message: response,
-        createdAt: new Date().toISOString(),
-        isAgent: false,
-      };
-      
-      setReport(prev => ({
-        ...prev,
-        responses: [...(prev?.responses || []), newResponse],
-        timeline: [
-          ...(prev?.timeline || []),
-          { action: 'You Responded', date: new Date().toISOString(), user: 'You' }
-        ]
-      }));
+      alert(err.response?.data?.message || 'Failed to send response');
     } finally {
       setSubmitting(false);
     }
@@ -174,62 +149,7 @@ const ReportDetails = () => {
     });
   };
 
-  // Mock data for development
-  const mockReport = {
-    _id: id,
-    type: 'fraud',
-    subject: 'Suspicious listing - property doesn\'t exist',
-    description: 'I visited the location and the property does not exist at the given address. The agent seems to be using fake photos.',
-    priority: 'high',
-    status: 'in-progress',
-    createdAt: '2024-02-15T10:30:00Z',
-    updatedAt: '2024-02-16T14:20:00Z',
-    property: {
-      _id: 'p1',
-      location: 'Lekki Phase 1, Lagos',
-      price: 5000000,
-      category: '3-Bedroom',
-      agent: {
-        name: 'John Agent',
-        phone: '+234 801 234 5678',
-        email: 'john.agent@realestate.com',
-      }
-    },
-    user: {
-      _id: 'u1',
-      name: 'Current User',
-      email: 'user@example.com',
-      phone: '+234 812 345 6789',
-    },
-    assignedTo: {
-      _id: 'a1',
-      name: 'Support Agent',
-      email: 'support@realestate.com',
-    },
-    responses: [
-      {
-        _id: 'r1',
-        user: 'Support Agent',
-        message: 'Thank you for your report. We are investigating this issue.',
-        createdAt: '2024-02-16T09:15:00Z',
-        isAgent: true,
-      },
-      {
-        _id: 'r2',
-        user: 'Current User',
-        message: 'I have more screenshots if needed.',
-        createdAt: '2024-02-16T11:30:00Z',
-        isAgent: false,
-      },
-    ],
-    timeline: [
-      { action: 'Report Submitted', date: '2024-02-15T10:30:00Z', user: 'You' },
-      { action: 'Report Assigned to Support', date: '2024-02-15T14:20:00Z', user: 'System' },
-      { action: 'Agent Responded', date: '2024-02-16T09:15:00Z', user: 'Support Agent' },
-      { action: 'You Replied', date: '2024-02-16T11:30:00Z', user: 'You' },
-      { action: 'Under Investigation', date: '2024-02-16T14:20:00Z', user: 'System' },
-    ],
-  };
+  
 
   // Simple timeline display
   const renderTimeline = () => {

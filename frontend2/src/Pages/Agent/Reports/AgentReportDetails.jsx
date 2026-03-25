@@ -282,23 +282,49 @@ const AgentReportDetails = () => {
               </Paper>
             </Box>
 
-            {/* Agent Response */}
-            {report.agentResponse && (
+            {/* Conversation */}
+            {report.responses && report.responses.length > 0 && (
               <Box sx={{ mb: 3 }}>
                 <Typography variant="subtitle2" color="text.secondary" gutterBottom>
-                  Your Response
+                  Conversation
                 </Typography>
-                <Paper variant="outlined" sx={{ p: 2, bgcolor: '#e8f5e9' }}>
-                  <Typography variant="body1" sx={{ whiteSpace: 'pre-wrap' }}>
-                    {report.agentResponse}
-                  </Typography>
-                  <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1 }}>
-                    Responded on {formatDate(report.respondedAt)}
-                  </Typography>
-                </Paper>
+
+                {report.responses.map((msg, index) => (
+                  <Box
+                    key={index}
+                    sx={{
+                      display: "flex",
+                      justifyContent: msg.isAgent ? "flex-end" : "flex-start",
+                      mb: 2,
+                    }}
+                  >
+                    <Box
+                      sx={{
+                        maxWidth: "70%",
+                        bgcolor: msg.isAgent ? "primary.main" : "#f5f5f5",
+                        color: msg.isAgent ? "white" : "text.primary",
+                        p: 2,
+                        borderRadius: 2,
+                      }}
+                    >
+                      <Typography variant="body2" sx={{ fontWeight: "bold" }}>
+                        {msg.user}
+                      </Typography>
+
+                      <Typography variant="body2">
+                        {msg.message}
+                      </Typography>
+
+                      <Typography variant="caption" color="text.secondary">
+                        {formatDate(msg.createdAt)}
+                      </Typography>
+                    </Box>
+                  </Box>
+                ))}
               </Box>
             )}
 
+            
             {/* Resolution Notes */}
             {report.resolutionNotes && (
               <Box sx={{ mb: 3 }}>
