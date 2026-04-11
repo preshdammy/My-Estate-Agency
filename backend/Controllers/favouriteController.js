@@ -1,6 +1,7 @@
 // controllers/favoriteController.js
 const Favorite = require("../Models/favouriteModel");
 const Apartment = require("../Models/apartmentmodel");
+const mongoose = require("mongoose");
 
 // =============== USER FUNCTIONS ===============
 
@@ -13,6 +14,10 @@ const addToFavorites = async (req, res) => {
       return res.status(400).json({ 
         message: "Apartment ID is required" 
       });
+    }
+
+    if (!mongoose.Types.ObjectId.isValid(apartmentId)) {
+      return res.status(400).json({ message: "Invalid apartment ID" });
     }
 
     // Verify apartment exists
@@ -70,7 +75,8 @@ const getUserFavorites = async (req, res) => {
           select: 'name email phone'
         }
       })
-      .sort({ createdAt: -1 });
+      .sort({ createdAt: -1 })
+      .lean();
     
     // Transform data to include favorite metadata
     const transformedFavorites = favorites.map(fav => ({
@@ -92,6 +98,10 @@ const getUserFavorites = async (req, res) => {
 const checkIfFavorite = async (req, res) => {
   try {
     const { apartmentId } = req.params;
+
+    if (!mongoose.Types.ObjectId.isValid(apartmentId)) {
+  return res.status(400).json({ message: "Invalid apartment ID" });
+}
     
     const favorite = await Favorite.findOne({
       user: req.user._id,
@@ -226,7 +236,7 @@ const getFavoriteStats = async (req, res) => {
     ] = await Promise.all([
       Favorite.countDocuments({ user: req.user._id }),
       Favorite.aggregate([
-        { $match: { user: req.user._id } },
+        { $match: { user: new mongoose.Types.ObjectId(req.user._id) } },
         { $lookup: {
             from: "apartments",
             localField: "apartment",
@@ -312,6 +322,27 @@ const getFavoriteTags = async (req, res) => {
   }
 };
 
+const toggleFavorite = async (req, res) => {
+  const { apartmentId } = req.params;
+
+  const existing = await Favorite.findOne({
+    user: req.user._id,
+    apartment: apartmentId
+  });
+
+  if (existing) {
+    await existing.deleteOne();
+    return res.json({ favorited: false });
+  }
+
+  await Favorite.create({
+    user: req.user._id,
+    apartment: apartmentId
+  });
+
+  res.json({ favorited: true });
+};
+
 module.exports = {
   // User functions
   addToFavorites,
@@ -322,5 +353,6 @@ module.exports = {
   removeApartmentFromFavorites,
   clearAllFavorites,
   getFavoriteStats,
-  getFavoriteTags
+  getFavoriteTags,
+  toggleFavorite
 };

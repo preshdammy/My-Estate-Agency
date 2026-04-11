@@ -43,10 +43,24 @@ const createBooking = async (req, res) => {
       .populate("apartment", "location price category images")
       .populate("user", "name email");
 
-    res.status(201).json({
+   await createNotification({
+      recipient: apartment.agent,
+      sender: req.user._id,
+      role: "agent",
+      type: "booking",
+      title: "New Booking Request",
+      message: `${req.user.name} requested to book "${apartment.location}".`,
+      relatedId: booking._id,
+      relatedModel: "Booking",
+      actionUrl: "/agent/bookings"
+    });
+
+      res.status(201).json({
       message: "Booking request submitted successfully",
       booking: populatedBooking
     });
+
+
   } catch (error) {
     console.error("Create booking error:", error);
     res.status(500).json({ message: "Server error" });
@@ -100,9 +114,22 @@ const cancelBooking = async (req, res) => {
     // Remove booking
     await booking.deleteOne();
 
-    res.json({ 
+    await createNotification({
+      recipient: apartment.agent,
+      sender: req.user._id,
+      role: "agent",
+      type: "booking",
+      title: "Booking Cancelled",
+      message: `${req.user.name} cancelled their booking for "${apartment.location}".`,
+      relatedId: booking._id,
+      relatedModel: "Booking",
+      actionUrl: "/agent/bookings"
+    });
+
+      res.json({ 
       message: "Booking cancelled successfully" 
     });
+
   } catch (error) {
     console.error("Cancel booking error:", error);
     res.status(500).json({ message: "Server error" });
@@ -211,18 +238,6 @@ const updateBookingStatus = async (req, res) => {
       await apartment.save();
     }
 
-      await createNotification(
-        booking.user,
-        "booking",
-        "Booking Approved",
-        "Your booking request has been approved.",
-        {
-          relatedId: booking._id,
-          relatedModel: "Booking",
-          actionUrl: `/user/bookings/${booking._id}`
-        }
-      );
-
     if (status === "rejected" || status === "cancelled") {
       apartment.availability = true;
       await apartment.save();
@@ -230,19 +245,37 @@ const updateBookingStatus = async (req, res) => {
 
     await booking.save();
 
-    await createNotification(
-      booking.user,
-      "booking",
-      "Booking Rejected",
-      "Your booking request was rejected by the agent.",
-      {
-        relatedId: booking._id,
-        relatedModel: "Booking",
-        actionUrl: `/user/bookings/${booking._id}`
-      }
-    );
+    let title = "";
+    let message = "";
 
-    res.json({
+    if (status === "approved") {
+      title = "Booking Approved";
+      message = `Your booking request for "${apartment.title}" has been approved.`;
+    }
+
+    if (status === "rejected") {
+      title = "Booking Rejected";
+      message = `Your booking request for "${apartment.title}" was rejected.`;
+    }
+
+    if (status === "cancelled") {
+      title = "Booking Cancelled";
+      message = `Your booking for "${apartment.title}" has been cancelled.`;
+    }
+
+    await createNotification({
+      recipient: booking.user,
+      sender: req.user._id,
+      role: "user",
+      type: "booking",
+      title,
+      message,
+      relatedId: booking._id,
+      relatedModel: "Booking",
+      actionUrl: "/user/bookings"
+    });
+
+     res.json({
       message: `Booking ${status} successfully`,
       booking,
     });

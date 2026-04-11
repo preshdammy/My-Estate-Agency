@@ -68,17 +68,27 @@ const submitReport = async (req, res) => {
       .populate('apartment', 'location price category')
       .populate('user', 'name email');
 
-    console.log('✅ Report created successfully:', {
-      id: report._id,
-      subject: report.subject,
-      type: report.reportType,
-      priority: report.priority
-    });
+      await createNotification({
+        recipient: apartment.agent,
+        sender: req.user._id,
+        role: "agent",
+        type: "report",
+        title: "New Property Report",
+        message: `${req.user.name} submitted a report for "${apartment.location}".`,
+        relatedId: report._id,
+        relatedModel: "Report",
+        actionUrl: "/agent/reports"
+      });
+
 
     res.status(201).json({
       message: "Report submitted successfully",
       report: populatedReport
     });
+
+     
+
+
   } catch (error) {
     console.error("❌ Submit report error:", error);
     res.status(500).json({ 
@@ -143,6 +153,23 @@ const getReportById = async (req, res) => {
   } catch (error) {
     console.error("❌ Get report by ID error:", error);
     res.status(500).json({ message: "Server error" });
+  }
+};
+
+// check if user already reported an apartment
+const checkUserReport = async (req, res) => {
+  try {
+    const report = await Report.findOne({
+      apartment: req.params.apartmentId,
+      user: req.user._id
+    });
+
+    res.json({
+      reported: !!report
+    });
+
+  } catch (error) {
+    res.status(500).json({ message: error.message });
   }
 };
 
@@ -217,17 +244,17 @@ const respondToReport = async (req, res) => {
 
     await report.save();
 
-    await createNotification(
-      report.user,
-      "report",
-      "Agent replied to your report",
-      "An agent has responded to your report.",
-      {
-        relatedId: report._id,
-        relatedModel: "Report",
-        actionUrl: `/user/reports/${report._id}`
-      }
-    );
+    await createNotification({
+      recipient: report.user,
+      sender: req.user._id,
+      role: "user",
+      type: "report",
+      title: "Report Update",
+      message: `Your report regarding "${apartment.location}" has been reviewed.`,
+      relatedId: report._id,
+      relatedModel: "Report",
+      actionUrl: "/user/reports"
+    });
 
 
     res.json({
@@ -279,29 +306,17 @@ const respondToReport = async (req, res) => {
 
     const apartment = await Apartment.findById(report.apartment);
 
-    await createNotification(
-      apartment.agent,
-      "report",
-      "User replied to a report",
-      "A user has replied to a report conversation.",
-      {
+     await createNotification({
+        recipient: apartment.agent,
+        sender: req.user._id,
+        role: "agent",
+        type: "report",
+        title: "Report Reply",
+        message: `${req.user.name} replied to a report regarding "${apartment.title}".`,
         relatedId: report._id,
         relatedModel: "Report",
         actionUrl: `/agent/reports/${report._id}`
-      }
-    );
-
-    await createNotification(
-        apartment.agent,
-        "report",
-        "User replied to a report",
-        "A user has replied to a report conversation.",
-        {
-          relatedId: report._id,
-          relatedModel: "Report",
-          actionUrl: `/agent/reports/${report._id}`
-        }
-      );
+      });
 
     res.json({
       message: "Reply sent successfully",
@@ -340,6 +355,18 @@ const agentResolveReport = async (req, res) => {
     report.resolvedAt = new Date();
 
     await report.save();
+
+    await createNotification({
+      recipient: report.user,
+      sender: req.user._id,
+      role: "user",
+      type: "report",
+      title: "Report Resolved",
+      message: `Your report regarding the ${apartment.category} in ${apartment.location} has been resolved.`,
+      relatedId: report._id,
+      relatedModel: "Report",
+      actionUrl: "/user/reports"
+    });
 
     res.json({
       message: "Report marked as resolved",
@@ -559,6 +586,7 @@ module.exports = {
   getUserReports,
   getReportById,
   replyToReport,
+  checkUserReport,
   
   // Agent functions
   getAgentReports,

@@ -70,10 +70,24 @@ const requestInspection = async (req, res) => {
       .populate('apartment', 'location price category')
       .populate('agent', 'name email phone');
 
-    res.status(201).json({
+    await createNotification({
+      recipient: apartment.agent,
+      sender: req.user._id,
+      role: "agent",
+      type: "inspection",
+      title: "New Inspection Request",
+      message: `${req.user.name} requested an inspection for "${apartment.location}".`,
+      relatedId: inspectionRequest._id,
+      relatedModel: "InspectionRequest",
+      actionUrl: "/agent/inspections"
+    });
+
+       res.status(201).json({
       message: "Inspection request submitted successfully",
       request: populatedRequest
     });
+
+
   } catch (error) {
     console.error("Request inspection error:", error);
     res.status(500).json({ message: "Server error" });
@@ -107,6 +121,7 @@ const cancelInspectionRequest = async (req, res) => {
     const { requestId } = req.params;
     
     const inspectionRequest = await InspectionRequest.findById(requestId);
+    const apartment = await Apartment.findById(inspectionRequest.apartment);
 
     if (!inspectionRequest) {
       return res.status(404).json({ message: "Inspection request not found" });
@@ -128,10 +143,23 @@ const cancelInspectionRequest = async (req, res) => {
 
     inspectionRequest.status = "cancelled";
     await inspectionRequest.save();
+       
+    await createNotification({
+        recipient: apartment.agent,
+        sender: req.user._id,
+        role: "agent",
+        type: "inspection",
+        title: "Inspection Cancelled",
+        message: `${req.user.name} cancelled the inspection request for "${apartment.location}".`,
+        relatedId: inspectionRequest._id,
+        relatedModel: "InspectionRequest",
+        actionUrl: "/agent/inspections"
+      });
 
-    res.json({ 
+      res.json({ 
       message: "Inspection request cancelled successfully" 
     });
+
   } catch (error) {
     console.error("Cancel inspection error:", error);
     res.status(500).json({ message: "Server error" });
@@ -189,10 +217,24 @@ const rescheduleInspection = async (req, res) => {
       .populate('apartment', 'location price category')
       .populate('agent', 'name email phone');
 
-    res.json({
+    await createNotification({
+      recipient: inspectionRequest.agent,
+      sender: req.user._id,
+      role: "agent",
+      type: "inspection",
+      title: "Inspection Rescheduled",
+      message: `${req.user.name} rescheduled the inspection for "${apartment.location}".`,
+      relatedId: inspectionRequest._id,
+      relatedModel: "InspectionRequest",
+      actionUrl: "/agent/inspections"
+    });
+
+      res.json({
       message: "Inspection request rescheduled successfully",
       request: populatedRequest
     });
+
+
   } catch (error) {
     console.error("Reschedule inspection error:", error);
     res.status(500).json({ message: "Server error" });
@@ -260,34 +302,23 @@ const updateInspectionStatus = async (req, res) => {
     
     await inspectionRequest.save();
 
-    await createNotification(
-      inspection.user,
-      "inspection",
-      "Inspection Approved",
-      "Your inspection request has been approved.",
-      {
-        relatedId: inspection._id,
-        relatedModel: "InspectionRequest",
-        actionUrl: `/user/inspections`
-      }
-    );
+    await createNotification({
+      recipient: inspectionRequest.user,
+      sender: req.user._id,
+      role: "user",
+      type: "inspection",
+      title: "Inspection Approved",
+      message: `Your inspection request for "${apartment.location}" has been approved.`,
+      relatedId: inspectionRequest._id,
+      relatedModel: "InspectionRequest",
+      actionUrl: "/user/inspections"
+    });
 
-    await createNotification(
-        inspection.user,
-        "inspection",
-        "Inspection Rejected",
-        "Your inspection request was rejected.",
-        {
-          relatedId: inspection._id,
-          relatedModel: "InspectionRequest",
-          actionUrl: `/user/inspections`
-        }
-      );
-
-    res.json({
+     res.json({
       message: `Inspection request ${status} successfully`,
       request: inspectionRequest
     });
+
   } catch (error) {
     console.error("Update inspection status error:", error);
     res.status(500).json({ message: error.message });
@@ -328,10 +359,23 @@ const completeInspection = async (req, res) => {
 
     await inspectionRequest.save();
 
+    await createNotification({
+      recipient: inspectionRequest.user,
+      sender: req.user._id,
+      role: "user",
+      type: "inspection",
+      title: "Inspection Completed",
+      message: `The inspection for "${apartment.location}" has been completed.`,
+      relatedId: inspectionRequest._id,
+      relatedModel: "InspectionRequest",
+      actionUrl: "/user/inspections"
+    });
+
     res.json({
       message: "Inspection marked as completed",
       request: inspectionRequest
     });
+
   } catch (error) {
     console.error("Complete inspection error:", error);
     res.status(500).json({ message: "Server error" });

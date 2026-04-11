@@ -2,47 +2,45 @@
 const mongoose = require("mongoose");
 
 const notificationSchema = new mongoose.Schema({
-  user: { 
+  recipient: { 
     type: mongoose.Schema.Types.ObjectId, 
     ref: "User", 
     required: true 
   },
+
+  sender: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "User"
+  },
+
+  role: {
+    type: String,
+    enum: ["user", "agent", "admin"],
+    required: true
+  },
+
   type: { 
     type: String, 
-    enum: ["booking", "inspection", "report", "payment", "review", "system", "message", "alert"],
+    enum: ["booking", "inspection", "report", "payment", "message", "system"],
     required: true 
   },
-  title: { 
-    type: String, 
-    required: true,
-    maxlength: 100
-  },
-  message: { 
-    type: String, 
-    required: true,
-    maxlength: 500
-  },
+
+  title: String,
+  message: String,
+
   isRead: { 
     type: Boolean, 
     default: false 
   },
-  isArchived: {
-    type: Boolean,
-    default: false
+
+  relatedId: mongoose.Schema.Types.ObjectId,
+  relatedModel: String,
+
+  createdAt: {
+    type: Date,
+    default: Date.now
   },
-  priority: {
-    type: String,
-    enum: ["low", "medium", "high"],
-    default: "medium"
-  },
-  relatedId: { 
-    type: mongoose.Schema.Types.ObjectId 
-  }, // bookingId, inspectionId, paymentId, etc.
-  relatedModel: {
-    type: String,
-    enum: ["Booking", "InspectionRequest", "Payment", "Report", "Review", "Apartment"]
-  },
-  metadata: { 
+    metadata: { 
     type: Object,
     default: {}
   },
@@ -53,12 +51,14 @@ const notificationSchema = new mongoose.Schema({
     type: Date
   }
 }, { 
-  timestamps: true 
+  timestamps: true
+
 });
 
+
 // Indexes for better query performance
-notificationSchema.index({ user: 1, isRead: 1 });
-notificationSchema.index({ user: 1, createdAt: -1 });
+notificationSchema.index({ recipient: 1, isRead: 1 });
+notificationSchema.index({ recipient: 1, createdAt: -1 });
 notificationSchema.index({ createdAt: -1 });
 notificationSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 }); // Auto-delete expired
 

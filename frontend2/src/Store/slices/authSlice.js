@@ -106,6 +106,9 @@ const authSlice = createSlice({
       state.role = null;
       state.error = null;
       state.success = false;
+      localStorage.removeItem("user");
+      localStorage.removeItem("token");
+      localStorage.removeItem("role");
       authService.logout();
     },
     clearError: (state) => {

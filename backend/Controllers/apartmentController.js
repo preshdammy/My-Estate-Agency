@@ -1,6 +1,7 @@
 // controllers/apartmentController.js
 const Apartment = require("../Models/apartmentmodel");
 const Agent = require("../Models/agentmodel");
+const { createNotification } = require("../Controllers/notificationController");
 
 // =============== PUBLIC ROUTES ===============
 
@@ -211,7 +212,19 @@ const createApartment = async (req, res) => {
       });
     }
 
-    res.status(201).json({
+    await createNotification({
+      recipient: user._id,
+      sender: req.user._id,
+      role: "user",
+      type: "system",
+      title: "New Property Available",
+      message: `A new property "${apartment.title}" has just been listed.`,
+      relatedId: apartment._id,
+      relatedModel: "Apartment",
+      actionUrl: "/properties"
+    });
+
+     res.status(201).json({
       message: "Apartment created successfully",
       apartment: apartmentObj
     });

@@ -6,6 +6,7 @@ const {
   getUserReports,
   getReportById,
   replyToReport,
+  checkUserReport,
   
   // Agent functions
   getAgentReports,
@@ -39,6 +40,8 @@ router.get("/:reportId", protect, getReportById);
 // User replies to a report
 router.post("/:reportId/reply", protect, replyToReport);
 
+// User checks if they have already reported a property
+router.get("/check/:apartmentId", protect, checkUserReport);
 // =============== AGENT PROTECTED ROUTES ===============
 
 // Agent gets reports for their apartments

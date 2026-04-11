@@ -33,6 +33,7 @@ import ManageBookings from './Pages/Agent/Bookings/manageBookings';
 import AgentBookingDetails from './Pages/Agent/Bookings/bookingDetails';
 import ManageReports from './Pages/Agent/Reports/manageReports';
 import InspectionDetails from './Pages/Agent/Inspections/inspectionDetails';
+import Favorites from './Pages/User/Favorites/favorites';
 
 
 // Auth Pages
@@ -136,6 +137,12 @@ function App() {
             <UserProfile />
           </ProtectedRoute>
         } /> 
+
+        <Route path="/user/favorites" element={
+          <ProtectedRoute allowedRoles={['user']}>
+            <Favorites />
+          </ProtectedRoute>
+        } />
         
         {/* Protected Agent Routes */}
        <Route path="/agent/dashboard" element={

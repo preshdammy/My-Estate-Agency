@@ -3,25 +3,37 @@ const Notification = require("../Models/notificationModel");
 const User = require("../Models/usermodel");
 
 // Helper function to create notification
-const createNotification = async (userId, type, title, message, metadata = {}) => {
+const createNotification = async ({
+  recipient,
+  sender,
+  role,
+  type,
+  title,
+  message,
+  relatedId,
+  relatedModel,
+  actionUrl,
+  metadata = {},
+  expiresAt
+}) => {
   try {
-    const notification = new Notification({
-      user: userId,
+    const notification = await Notification.create({
+      recipient,
+      sender,
+      role,
       type,
       title,
       message,
+      relatedId,
+      relatedModel,
+      actionUrl,
       metadata,
-      relatedId: metadata.relatedId,
-      relatedModel: metadata.relatedModel,
-      actionUrl: metadata.actionUrl,
-      priority: metadata.priority || "medium"
+      expiresAt
     });
 
-    await notification.save();
     return notification;
   } catch (error) {
-    console.error("Create notification error:", error);
-    return null;
+    console.error(error);
   }
 };
 
@@ -32,7 +44,7 @@ const getUserNotifications = async (req, res) => {
   try {
     const { read, type, limit = 20, page = 1 } = req.query;
     
-    let filter = { user: req.user._id, isArchived: false };
+    let filter = { recipient: req.user._id };
     if (read !== undefined) filter.isRead = read === "true";
     if (type) filter.type = type;
 
@@ -43,9 +55,8 @@ const getUserNotifications = async (req, res) => {
     
     const total = await Notification.countDocuments(filter);
     const unreadCount = await Notification.countDocuments({ 
-      user: req.user._id, 
-      isRead: false,
-      isArchived: false 
+      recipient: req.user._id, 
+      isRead: false
     });
 
     res.json({
@@ -73,7 +84,7 @@ const markAsRead = async (req, res) => {
     }
 
     // Check if user owns this notification
-    if (notification.user.toString() !== req.user._id.toString()) {
+    if (notification.recipient.toString() !== req.user._id.toString()) {
       return res.status(403).json({ 
         message: "Not authorized to update this notification" 
       });
@@ -121,7 +132,7 @@ const archiveNotification = async (req, res) => {
     }
 
     // Check if user owns this notification
-    if (notification.user.toString() !== req.user._id.toString()) {
+    if (notification.recipient.toString() !== req.user._id.toString()) {
       return res.status(403).json({ 
         message: "Not authorized to archive this notification" 
       });
@@ -152,7 +163,7 @@ const deleteNotification = async (req, res) => {
     }
 
     // Check if user owns this notification
-    if (notification.user.toString() !== req.user._id.toString()) {
+    if (notification.recipient.toString() !== req.user._id.toString()) {
       return res.status(403).json({ 
         message: "Not authorized to delete this notification" 
       });
@@ -172,7 +183,7 @@ const deleteNotification = async (req, res) => {
 // User clears all notifications
 const clearAllNotifications = async (req, res) => {
   try {
-    await Notification.deleteMany({ user: req.user._id });
+    await Notification.deleteMany({ recipient: req.user._id });
 
     res.json({ 
       message: "All notifications cleared" 

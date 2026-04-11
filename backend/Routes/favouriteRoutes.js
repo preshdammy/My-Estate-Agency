@@ -10,7 +10,8 @@ const {
   removeApartmentFromFavorites,
   clearAllFavorites,
   getFavoriteStats,
-  getFavoriteTags
+  getFavoriteTags,
+  toggleFavorite
 } = require("../Controllers/favouriteController");
 
 const { protect } = require("../Middlewares/authMiddleware");
@@ -37,11 +38,13 @@ router.get("/tags", protect, getFavoriteTags);
 // User updates favorite
 router.put("/:favoriteId", protect, updateFavorite);
 
-// User removes from favorites by favorite ID
-router.delete("/:favoriteId", protect, removeFromFavorites);
+router.post("/toggle/:apartmentId", protect, toggleFavorite);
 
 // User removes from favorites by apartment ID
 router.delete("/apartment/:apartmentId", protect, removeApartmentFromFavorites);
+
+// User removes from favorites by favorite ID
+router.delete("/:favoriteId", protect, removeFromFavorites);
 
 // User clears all favorites
 router.delete("/", protect, clearAllFavorites);

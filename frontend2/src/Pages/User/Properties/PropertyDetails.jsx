@@ -88,6 +88,7 @@ const PropertyDetails = () => {
   const [error, setError] = useState(null);
   const [tabValue, setTabValue] = useState(0);
   const [isFavorite, setIsFavorite] = useState(false);
+  const [favoriteLoading, setFavoriteLoading] = useState(false);
   const [selectedImage, setSelectedImage] = useState(0);
   const [galleryOpen, setGalleryOpen] = useState(false);
   
@@ -102,6 +103,7 @@ const PropertyDetails = () => {
   const [reportDialog, setReportDialog] = useState(false);
   const [reportReason, setReportReason] = useState('');
   const [reportDetails, setReportDetails] = useState('');
+  const [alreadyReported, setAlreadyReported] = useState(false);
 
   // Booking Dialog
   const [bookingDialog, setBookingDialog] = useState(false);
@@ -115,7 +117,7 @@ const PropertyDetails = () => {
   // Fetch property details
   useEffect(() => {
     fetchPropertyDetails();
-  }, [id]);
+  }, [id, user]);
 
  const fetchPropertyDetails = async () => {
   setLoading(true);
@@ -129,6 +131,19 @@ const PropertyDetails = () => {
     console.log("Apartment response:", response.data);
 
     setProperty(apt);
+
+      if (user) {
+        checkFavoriteStatus(apt._id);
+      }
+
+     if (user && user.role === "user") {
+      try {
+        const res = await api.get(`/reports/check/${apt._id}`);
+        setAlreadyReported(res.data.reported);
+      } catch (err) {
+        console.error("Report check failed:", err);
+      }
+    }
 
     // 👇 ADD THIS RIGHT AFTER setProperty
         if (apt?.agent?._id) {
@@ -153,32 +168,77 @@ const PropertyDetails = () => {
 
     } catch (err) {
       console.error('Error fetching property:', err);
-      setProperty(mockProperty);
+      setProperty(null);
     } finally {
       setLoading(false);
     }
-  };
-  const handleTabChange = (event, newValue) => {
-    setTabValue(newValue);
-  };
+    };
+    const handleTabChange = (event, newValue) => {
+      setTabValue(newValue);
+    };
 
-  const toggleFavorite = async () => {
-    if (!isAuthenticated) {
-      setSnackbar({
-        open: true,
-        message: 'Please login to save properties',
-        severity: 'warning',
-      });
-      return;
+    const checkFavoriteStatus = async (apartmentId) => {
+    if (!user || !apartmentId) return;
+
+    try {
+      const res = await api.get(`/favorites/check/${apartmentId}`);
+      setIsFavorite(res.data.isFavorite);
+    } catch (err) {
+      console.error("Favorite check error:", err);
     }
+  };
 
-    setIsFavorite(!isFavorite);
+
+ const toggleFavorite = async () => {
+  if (!user) {
     setSnackbar({
       open: true,
-      message: isFavorite ? 'Removed from favorites' : 'Added to favorites',
-      severity: 'success',
+      message: "Please login to save properties",
+      severity: "warning",
     });
-  };
+    return;
+  }
+
+  try {
+    setFavoriteLoading(true);
+
+    if (isFavorite) {
+      await api.delete(`/favorites/apartment/${property._id}`);
+
+      setSnackbar({
+        open: true,
+        message: "Removed from favorites",
+        severity: "info",
+      });
+
+      setIsFavorite(false);
+
+    } else {
+      await api.post("/favorites", {
+        apartmentId: property._id
+      });
+
+      setSnackbar({
+        open: true,
+        message: "Added to favorites",
+        severity: "success",
+      });
+
+      setIsFavorite(true);
+    }
+
+  } catch (err) {
+    console.error("Favorite toggle error:", err);
+
+    setSnackbar({
+      open: true,
+      message: err.response?.data?.message || "Favorite action failed",
+      severity: "error",
+    });
+  } finally {
+    setFavoriteLoading(false);
+  }
+};
 
  const handleRequestInspection = () => {
   if (!token) {
@@ -231,6 +291,7 @@ const PropertyDetails = () => {
     setInspectionDialog(false);
 
   } catch (err) {
+     console.log("INSPECTION ERROR:", err.response?.data);
     setSnackbar({
       open: true,
       message: "Failed to request inspection",
@@ -241,26 +302,45 @@ const PropertyDetails = () => {
   }
 };
 
-  const handleReportSubmit = () => {
-    if (!reportReason) {
-      setSnackbar({
-        open: true,
-        message: 'Please select a reason',
-        severity: 'error',
-      });
-      return;
-    }
-
-    setReportDialog(false);
+ const handleReportSubmit = async () => {
+  if (!reportReason) {
     setSnackbar({
       open: true,
-      message: 'Report submitted successfully',
-      severity: 'success',
+      message: "Please select a reason",
+      severity: "error",
     });
-    setReportReason('');
-    setReportDetails('');
-  };
+    return;
+  }
 
+  try {
+    await api.post("/reports", {
+      apartmentId: property._id,
+      type: reportReason,
+      subject: "Property Report",
+      message: reportDetails,
+      priority: "medium"
+    });
+
+    setSnackbar({
+      open: true,
+      message: "Report submitted successfully",
+      severity: "success",
+    });
+
+    setReportDialog(false);
+    setReportReason("");
+    setReportDetails("");
+
+  } catch (err) {
+    console.log("REPORT ERROR:", err.response?.data);
+
+    setSnackbar({
+      open: true,
+      message: err.response?.data?.message || "Failed to submit report",
+      severity: "error",
+    });
+  }
+ };
   const handleShare = () => {
     if (navigator.share) {
       navigator.share({
@@ -524,21 +604,41 @@ const PropertyDetails = () => {
               </Box>
 
               <Box sx={{ display: 'flex', gap: 1 }}>
-                <Tooltip title={isFavorite ? 'Remove from favorites' : 'Add to favorites'}>
-                  <IconButton onClick={toggleFavorite} color={isFavorite ? 'error' : 'default'}>
-                    {isFavorite ? <FavoriteIcon /> : <FavoriteBorderIcon />}
-                  </IconButton>
+              <Tooltip title={isFavorite ? "Remove from favorites" : "Add to favorites"}>
+                  <span>
+                    <IconButton
+                      onClick={toggleFavorite}
+                      color={isFavorite ? "error" : "default"}
+                      disabled={favoriteLoading}
+                    >
+                      {isFavorite ? <FavoriteIcon /> : <FavoriteBorderIcon />}
+                    </IconButton>
+                  </span>
                 </Tooltip>
                 <Tooltip title="Share property">
                   <IconButton onClick={handleShare}>
                     <ShareIcon />
                   </IconButton>
                 </Tooltip>
-                <Tooltip title="Report property">
-                  <IconButton onClick={() => setReportDialog(true)} color="error">
-                    <ReportIcon />
-                  </IconButton>
-                </Tooltip>
+               {isAuthenticated && isUser && (
+                 <Tooltip
+                      title={
+                        alreadyReported
+                          ? "You already reported this property"
+                          : "Report property"
+                      }
+                    >
+                      <span>
+                        <IconButton
+                          onClick={() => setReportDialog(true)}
+                          color="error"
+                          disabled={alreadyReported}
+                        >
+                          <ReportIcon />
+                        </IconButton>
+                      </span>
+                    </Tooltip>
+                )}
               </Box>
             </Box>
 
@@ -900,12 +1000,13 @@ const PropertyDetails = () => {
                 onChange={(e) => setReportReason(e.target.value)}
                 required
             >
-                <MenuItem value="fake">Fake Listing</MenuItem>
-                <MenuItem value="wrong_info">Wrong Information</MenuItem>
-                <MenuItem value="already_sold">Already Sold/Rented</MenuItem>
-                <MenuItem value="scam">Suspected Scam</MenuItem>
-                <MenuItem value="agent_issue">Agent Behavior</MenuItem>
-                <MenuItem value="other">Other</MenuItem>
+                <MenuItem value="fraud">Suspected Fraud / Scam</MenuItem>
+                <MenuItem value="safety">Safety Concern</MenuItem>
+                <MenuItem value="condition">Poor Condition</MenuItem>
+                <MenuItem value="noise">Noise Complaint</MenuItem>
+                <MenuItem value="maintenance">Maintenance Issue</MenuItem>
+                <MenuItem value="general">General Complaint</MenuItem>
+                <MenuItem value="other">Other Issue</MenuItem>
             </Select>
             </FormControl>
 
@@ -920,14 +1021,13 @@ const PropertyDetails = () => {
             />
         </DialogContent>
         <DialogActions>
-            <Button onClick={() => setReportDialog(false)}>Cancel</Button>
-            <Button
-            onClick={handleReportSubmit}
-            variant="contained"
-            color="error"
-            disabled={!reportReason}
+           <Button
+              onClick={handleReportSubmit}
+              variant="contained"
+              color="error"
+              disabled={!reportReason}
             >
-            Submit Report
+              Submit Report
             </Button>
         </DialogActions>
         </Dialog>
